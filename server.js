@@ -244,11 +244,16 @@ app.get('/api/metrics/:id/range', requireAuth, async (req, res) => {
   const metric = config.metrics.find(m => m.id === req.params.id);
   if (!metric) return res.status(404).json({ error: 'Metric not found' });
 
-  const { labels: labelsParam, hours = 24 } = req.query;
+  const { labels: labelsParam, hours, start: startParam, end: endParam } = req.query;
   const windowSecs = parseRuleWindowSeconds(metric);
-  // Floor end to the last complete window boundary
-  const end = Math.floor(Date.now() / 1000 / windowSecs) * windowSecs;
-  const start = end - parseInt(hours, 10) * 3600;
+  let end, start;
+  if (startParam && endParam) {
+    end = Math.floor(parseInt(endParam, 10) / windowSecs) * windowSecs;
+    start = parseInt(startParam, 10);
+  } else {
+    end = Math.floor(Date.now() / 1000 / windowSecs) * windowSecs;
+    start = end - parseInt(hours || 24, 10) * 3600;
+  }
   const step = windowSecs;
 
   let query = metric.rule;

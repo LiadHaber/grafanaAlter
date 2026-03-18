@@ -153,21 +153,39 @@
     }
     .ep-clear-btn:hover { color: var(--red); }
 
-    /* Time pills */
-    .time-pills-wrap { padding: 0 12px; display: flex; flex-wrap: wrap; gap: 5px; }
-    .time-pill {
+    /* Date picker */
+    .date-picker-wrap { padding: 0 12px; display: flex; flex-direction: column; gap: 8px; }
+    .dt-row { display: flex; flex-direction: column; gap: 3px; }
+    .dt-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px; }
+    .dt-input {
       background: var(--surface2);
       border: 1px solid var(--border);
-      color: var(--muted);
-      border-radius: 6px;
-      padding: 4px 10px;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 10px;
       font-size: 12px;
       font-family: inherit;
+      outline: none;
+      width: 100%;
       cursor: pointer;
-      transition: all 0.12s;
+      color-scheme: dark;
     }
-    .time-pill:hover { border-color: var(--accent); color: var(--accent); }
-    .time-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .dt-input:focus { border-color: var(--accent); }
+    .btn-apply {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 600;
+      width: 100%;
+      transition: opacity 0.15s;
+      margin-top: 2px;
+    }
+    .btn-apply:hover { opacity: 0.85; }
 
     /* Metric nav buttons */
     .sidebar-nav { flex: 1; padding: 8px 0; }
@@ -610,10 +628,20 @@
       </div>
     </div>
 
-    <!-- Time Range -->
+    <!-- Date Range -->
     <div class="sidebar-section">
-      <span class="sidebar-section-title">Time Range</span>
-      <div class="time-pills-wrap" id="time-pills"></div>
+      <span class="sidebar-section-title">Date Range</span>
+      <div class="date-picker-wrap">
+        <div class="dt-row">
+          <label class="dt-label">From</label>
+          <input type="datetime-local" id="dt-from" class="dt-input" />
+        </div>
+        <div class="dt-row">
+          <label class="dt-label">To</label>
+          <input type="datetime-local" id="dt-to" class="dt-input" />
+        </div>
+        <button class="btn-apply" onclick="applyDateRange()">Apply</button>
+      </div>
     </div>
 
     <!-- Navigation -->
@@ -680,7 +708,8 @@ const PALETTE = [
 
 // ── Global State ─────────────────────────────────────────────────
 let globalEP = null;          // selected endpoint — persists across all views
-let globalHours = 24;         // time range — global for all charts
+let globalStart = null;       // Unix seconds — start of selected range
+let globalEnd = null;         // Unix seconds — end of selected range
 let allJobs = [];             // loaded once from /api/jobs
 let allMetrics = [];          // loaded once from /api/metrics
 let activeView = null;        // current view id (metric id, '_overview', '_combined')
@@ -930,25 +959,47 @@ document.addEventListener('click', e => {
 });
 
 // ── Time Pills ───────────────────────────────────────────────────
-function initTimePills() {
-  const ranges = [
-    { h: 1, label: '1h' }, { h: 6, label: '6h' }, { h: 12, label: '12h' },
-    { h: 24, label: '24h' }, { h: 48, label: '2d' }, { h: 168, label: '7d' }
-  ];
-  const container = document.getElementById('time-pills');
-  container.innerHTML = ranges.map(r =>
-    `<button class="time-pill ${r.h === globalHours ? 'active' : ''}" data-h="${r.h}" onclick="setGlobalHours(${r.h})">${r.label}</button>`
-  ).join('');
+function toDatetimeLocal(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function setGlobalHours(h) {
-  globalHours = h;
-  document.querySelectorAll('.time-pill').forEach(p =>
-    p.classList.toggle('active', parseInt(p.dataset.h) === h));
-  // Refresh active view's charts
+function initDatePicker() {
+  const now = new Date();
+  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  document.getElementById('dt-to').value = toDatetimeLocal(now);
+  document.getElementById('dt-from').value = toDatetimeLocal(from);
+  globalStart = Math.floor(from.getTime() / 1000);
+  globalEnd = Math.floor(now.getTime() / 1000);
+}
+
+function applyDateRange() {
+  const fromVal = document.getElementById('dt-from').value;
+  const toVal = document.getElementById('dt-to').value;
+  if (!fromVal || !toVal) return;
+  const start = Math.floor(new Date(fromVal).getTime() / 1000);
+  const end = Math.floor(new Date(toVal).getTime() / 1000);
+  if (start >= end) { alert('Start must be before end.'); return; }
+  globalStart = start;
+  globalEnd = end;
   if (activeView === '_overview') renderOverview();
   else if (activeView === '_combined') renderCombined();
   else if (activeView && cachedRangeData) refreshMetricChart();
+}
+
+function rangeQueryParams() {
+  if (globalStart && globalEnd) return `start=${globalStart}&end=${globalEnd}`;
+  const now = Math.floor(Date.now() / 1000);
+  return `start=${now - 86400}&end=${now}`;
+}
+
+function getPeriodLabel() {
+  if (!globalStart || !globalEnd) return '24h';
+  const diffSecs = globalEnd - globalStart;
+  const diffHours = Math.round(diffSecs / 3600);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = diffSecs / 86400;
+  return Number.isInteger(diffDays) ? `${diffDays}d` : `${diffDays.toFixed(1)}d`;
 }
 
 // ── Sidebar ──────────────────────────────────────────────────────
@@ -997,7 +1048,7 @@ async function renderOverview() {
   if (!requireEP('Use the Endpoint selector in the sidebar to get started.')) return;
 
   const el = document.getElementById('content');
-  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+  const periodLabel = getPeriodLabel();
 
   el.innerHTML = `
     <div class="controls">
@@ -1054,7 +1105,7 @@ async function loadOverviewChart(m) {
   const labelFilter = filterDim ? { [filterDim]: globalEP } : { job: globalEP };
   const labelsParam = encodeURIComponent(JSON.stringify(labelFilter));
   try {
-    const data = await apiFetch(`/api/metrics/${m.id}/range?labels=${labelsParam}&hours=${globalHours}`);
+    const data = await apiFetch(`/api/metrics/${m.id}/range?labels=${labelsParam}&${rangeQueryParams()}`);
     if (!data?.series?.length) return;
 
     // Cache range data for per-metric download
@@ -1071,7 +1122,7 @@ async function loadOverviewChart(m) {
       const agg = allVals.length
         ? (isPercent ? allVals.reduce((a,b)=>a+b,0)/allVals.length : allVals.reduce((a,b)=>a+b,0))
         : null;
-      const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+      const periodLabel = getPeriodLabel();
       const aggLabel = isPercent ? `avg · last ${periodLabel}` : `total · last ${periodLabel}`;
       statEl.className = 'ov-stat';
       statEl.style = '';
@@ -1092,7 +1143,7 @@ async function loadOverviewChart(m) {
       const wrapEl = canvas?.parentElement;
       if (!wrapEl) return;
       const isPercent = m.unit === '%';
-      const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+      const periodLabel = getPeriodLabel();
       const tableRows = sorted.map((s, i) => {
         const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
         const agg = vals.length
@@ -1138,7 +1189,7 @@ function downloadOverviewMetric(metricId) {
   const data = _ovRangeCache[metricId];
   if (!data) { alert('Data not loaded yet — wait for the chart to finish loading.'); return; }
   const { series, metric } = data;
-  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+  const periodLabel = getPeriodLabel();
   const rows = [['Timestamp', 'Label', 'Value', 'Unit']];
   for (const s of series) {
     for (const p of s.points) {
@@ -1156,7 +1207,7 @@ async function renderCombined() {
 
   const impsMetric = allMetrics.find(m => m.id === 'impsByBundle:1h');
   const fillMetric = allMetrics.find(m => m.id === 'fillRateByBundle:30m');
-  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+  const periodLabel = getPeriodLabel();
 
   const el = document.getElementById('content');
   el.innerHTML = `
@@ -1188,8 +1239,8 @@ async function renderCombined() {
   const labelsParam = encodeURIComponent(JSON.stringify({ job: globalEP }));
   try {
     const [impsRange, fillRange] = await Promise.all([
-      apiFetch(`/api/metrics/${impsMetric.id}/range?labels=${labelsParam}&hours=${globalHours}`),
-      apiFetch(`/api/metrics/${fillMetric.id}/range?labels=${labelsParam}&hours=${globalHours}`),
+      apiFetch(`/api/metrics/${impsMetric.id}/range?labels=${labelsParam}&${rangeQueryParams()}`),
+      apiFetch(`/api/metrics/${fillMetric.id}/range?labels=${labelsParam}&${rangeQueryParams()}`),
     ]);
 
     combinedImpsRange = impsRange;
@@ -1300,7 +1351,7 @@ async function autoLoadAllSeriesChart() {
   if (!panel) return;
   try {
     const labelsParam = encodeURIComponent(JSON.stringify({ [filterDim]: globalEP }));
-    const data = await apiFetch(`/api/metrics/${activeView}/range?labels=${labelsParam}&hours=${globalHours}`);
+    const data = await apiFetch(`/api/metrics/${activeView}/range?labels=${labelsParam}&${rangeQueryParams()}`);
     if (!data) return;
     const sorted = data.series.slice().sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
     cachedRangeData = { ...data, series: sorted };
@@ -1316,7 +1367,7 @@ function renderBundleTable(data, metricConf) {
   const { metric, series } = data;
   const isPercent = metric.unit === '%';
   const cardDims = getCardDims(metricConf);
-  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+  const periodLabel = getPeriodLabel();
 
   // Aggregate over the time range: sum for counts, avg for percentages
   const rows = series.map((s, i) => {
@@ -1386,7 +1437,7 @@ async function refreshMetricChart() {
     try {
       const panel = document.getElementById('chart-panel');
       if (panel) panel.innerHTML = `<div class="skeleton" style="height:300px;"></div>`;
-      const data = await apiFetch(`/api/metrics/${activeView}/range?labels=${labelsParam}&hours=${globalHours}`);
+      const data = await apiFetch(`/api/metrics/${activeView}/range?labels=${labelsParam}&${rangeQueryParams()}`);
       if (!data) return;
       cachedRangeData = data;
       renderRangePanel(activeLabel, data);
@@ -1622,7 +1673,7 @@ async function selectLabel(cardIdx) {
 
   try {
     const labelsParam = encodeURIComponent(JSON.stringify(activeLabelMap));
-    const data = await apiFetch(`/api/metrics/${card.metricId}/range?labels=${labelsParam}&hours=${globalHours}`);
+    const data = await apiFetch(`/api/metrics/${card.metricId}/range?labels=${labelsParam}&${rangeQueryParams()}`);
     if (!data) return;
     cachedRangeData = data;
     renderRangePanel(activeLabel, data);
@@ -1720,30 +1771,37 @@ async function executeModalDownload() {
   btn.textContent = 'Fetching…';
   btn.disabled = true;
 
+  const periodLabel = getPeriodLabel();
+  const fromStr = globalStart ? new Date(globalStart * 1000).toISOString().slice(0,16).replace('T',' ') : '';
+  const toStr   = globalEnd   ? new Date(globalEnd   * 1000).toISOString().slice(0,16).replace('T',' ') : '';
+
   try {
-    const rows = [['Endpoint', 'Metric', 'Label', 'Value', 'Unit']];
+    const rows = [['Endpoint', 'Metric', 'Label', `Value (${periodLabel})`, 'Unit', 'From', 'To']];
 
     for (const metricId of selectedMetricIds) {
       const metricConf = allMetrics.find(m => m.id === metricId);
       const filterDim = getFilterDim(metricConf);
       const cardDims = getCardDims(metricConf);
+      const isPercent = metricConf.unit === '%';
       try {
-        const data = await apiFetch(`/api/metrics/${metricId}/current`);
-        if (!data) continue;
-        const { metric, results } = data;
         for (const ep of selectedEPs) {
-          const epResults = filterDim
-            ? results.filter(r => r.labelMap[filterDim] === ep)
-            : results.filter(r => r.labelMap?.job === ep);
-          for (const r of epResults) {
-            const label = cardDims.map(d => r.labelMap?.[d] ?? '?').join(' / ');
-            rows.push([`"${ep}"`, `"${metric.name}"`, `"${label}"`, r.value ?? '', `"${metric.unit}"`]);
+          const labelFilter = filterDim ? { [filterDim]: ep } : { job: ep };
+          const labelsParam = encodeURIComponent(JSON.stringify(labelFilter));
+          const data = await apiFetch(`/api/metrics/${metricId}/range?labels=${labelsParam}&${rangeQueryParams()}`);
+          if (!data?.series?.length) continue;
+          for (const s of data.series) {
+            const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
+            const agg = vals.length
+              ? (isPercent ? vals.reduce((a,b)=>a+b,0)/vals.length : vals.reduce((a,b)=>a+b,0))
+              : null;
+            const labelParts = cardDims.map((_, di) => s.label.split(' / ')[di] ?? '?').join(' / ');
+            rows.push([`"${ep}"`, `"${data.metric.name}"`, `"${labelParts}"`, agg ?? '', `"${data.metric.unit}"`, `"${fromStr}"`, `"${toStr}"`]);
           }
         }
       } catch (_) {}
     }
 
-    triggerCsvDownload(rows, `metrics_export`);
+    triggerCsvDownload(rows, `metrics_export_${periodLabel}`);
     closeDownloadModal();
   } finally {
     btn.textContent = 'Download CSV';
@@ -1765,7 +1823,7 @@ function logout() {
 
 // ── Init ─────────────────────────────────────────────────────────
 async function init() {
-  initTimePills();
+  initDatePicker();
   await Promise.all([loadSidebar(), initUser()]);
   await initEPSelector();
 }
