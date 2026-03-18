@@ -771,7 +771,22 @@ function drawChartOnCanvas(canvasId, series, unit, stepMs, startMs, endMs, opts 
   const canvas = document.getElementById(canvasId);
   if (!canvas || !series.length) return null;
 
-  const datasets = series.map((s, i) => {
+  const MAX_SERIES = 20;
+  const totalSeries = series.length;
+  const displaySeries = series.slice(0, MAX_SERIES);
+
+  // Show "top N of M" note when truncated
+  const noteId = canvasId + '-note';
+  const existingNote = document.getElementById(noteId);
+  if (existingNote) existingNote.remove();
+  if (totalSeries > MAX_SERIES) {
+    canvas.parentElement?.insertAdjacentHTML('afterend',
+      `<div id="${noteId}" style="font-size:11px;color:var(--muted);text-align:right;margin-top:6px">
+        Showing top ${MAX_SERIES} of ${totalSeries} bundles by value
+      </div>`);
+  }
+
+  const datasets = displaySeries.map((s, i) => {
     const color = PALETTE[i % PALETTE.length];
     const dimmed = opts.isolatedLabel && opts.isolatedLabel !== s.label;
     return {
@@ -798,8 +813,9 @@ function drawChartOnCanvas(canvasId, series, unit, stepMs, startMs, endMs, opts 
       } : undefined,
       plugins: {
         legend: {
-          display: series.length > 1,
-          labels: { color: '#8892b0', font: { size: 11 } },
+          display: displaySeries.length > 1,
+          position: displaySeries.length > 8 ? 'bottom' : 'top',
+          labels: { color: '#8892b0', font: { size: 11 }, boxWidth: 12, padding: 10 },
         },
         tooltip: {
           backgroundColor: '#1a1d27',
@@ -1068,7 +1084,43 @@ async function loadOverviewChart(m) {
     }
 
     const sorted = data.series.slice().sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
-    drawChartOnCanvas(canvasId, sorted, m.unit, data.stepMs, data.startMs, data.endMs);
+    const filterDim = getFilterDim(m);
+
+    if (filterDim) {
+      // Bundle metric — replace canvas with scrollable table
+      const canvas = document.getElementById(canvasId);
+      const wrapEl = canvas?.parentElement;
+      if (!wrapEl) return;
+      const isPercent = m.unit === '%';
+      const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+      const tableRows = sorted.map((s, i) => {
+        const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
+        const agg = vals.length
+          ? (isPercent ? vals.reduce((a,b)=>a+b,0)/vals.length : vals.reduce((a,b)=>a+b,0))
+          : null;
+        const bundleName = s.label.split(' / ')[0];
+        return `<tr>
+          <td style="color:var(--muted);width:32px;font-size:11px">${i+1}</td>
+          <td><span class="bundle-dot" style="background:${PALETTE[i%PALETTE.length]}"></span>${bundleName}</td>
+          <td>${agg !== null ? formatValue(agg) + ' ' + m.unit : '—'}</td>
+        </tr>`;
+      }).join('');
+      wrapEl.outerHTML = `
+        <div style="overflow-y:auto;max-height:280px;border:1px solid var(--border);border-radius:8px;margin-top:4px">
+          <table class="bundle-table" style="width:100%">
+            <thead style="position:sticky;top:0;z-index:1">
+              <tr>
+                <th style="background:var(--surface2)">#</th>
+                <th style="background:var(--surface2)">Bundle</th>
+                <th style="background:var(--surface2)">${isPercent ? 'Avg' : 'Total'} · last ${periodLabel}</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>`;
+    } else {
+      drawChartOnCanvas(canvasId, sorted, m.unit, data.stepMs, data.startMs, data.endMs);
+    }
   } catch (_) {
     const statEl = document.getElementById(`ov-stat-${safeIdStr(m.id)}`);
     if (statEl) {
@@ -1143,27 +1195,30 @@ async function renderCombined() {
     combinedImpsRange = impsRange;
     combinedFillRange = fillRange;
 
-    // Build table from last-point values, joined on bundle
+    // Build table — aggregate over time range (sum for imps, avg for fill)
     const bundleMap = {};
     const bundleOrder = [];
 
     (impsRange?.series ?? []).forEach((s, i) => {
       const bundle = s.label.split(' / ')[0];
       if (!bundleMap[bundle]) { bundleMap[bundle] = { color: PALETTE[i % PALETTE.length] }; bundleOrder.push(bundle); }
-      bundleMap[bundle].imps = lastValue(s);
+      const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
+      bundleMap[bundle].imps = vals.length ? vals.reduce((a,b)=>a+b,0) : null;
     });
     (fillRange?.series ?? []).forEach((s, i) => {
       const bundle = s.label.split(' / ')[0];
       if (!bundleMap[bundle]) { bundleMap[bundle] = { color: PALETTE[i % PALETTE.length] }; bundleOrder.push(bundle); }
-      bundleMap[bundle].fill = lastValue(s);
+      const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
+      bundleMap[bundle].fill = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
     });
 
     const bundles = bundleOrder.sort((a, b) => (bundleMap[b].imps ?? 0) - (bundleMap[a].imps ?? 0));
-    window._combinedBundleData = { bundleMap, bundles };
+    window._combinedBundleData = { bundleMap, bundles, periodLabel };
 
-    const tableRows = bundles.map(b => {
+    const tableRows = bundles.map((b, i) => {
       const v = bundleMap[b];
       return `<tr>
+        <td style="color:var(--muted);width:36px">${i + 1}</td>
         <td><span class="bundle-dot" style="background:${v.color}"></span>${b}</td>
         <td>${v.imps !== null && v.imps !== undefined ? formatValue(v.imps) : '—'}</td>
         <td>${v.fill !== null && v.fill !== undefined ? formatValue(v.fill) + '%' : '—'}</td>
@@ -1171,90 +1226,38 @@ async function renderCombined() {
     }).join('');
 
     document.getElementById('combined-body').innerHTML = `
-      <div class="bundle-table-wrap">
-        <table class="bundle-table">
-          <thead><tr><th>Bundle</th><th>Impressions (1h window)</th><th>Fill Rate (30m window)</th></tr></thead>
+      <div style="overflow-y:auto;max-height:600px;border:1px solid var(--border);border-radius:var(--radius)">
+        <table class="bundle-table" style="width:100%">
+          <thead style="position:sticky;top:0;z-index:1">
+            <tr>
+              <th style="background:var(--surface2)">#</th>
+              <th style="background:var(--surface2)">Bundle</th>
+              <th style="background:var(--surface2)">Total Imps · last ${periodLabel}</th>
+              <th style="background:var(--surface2)">Avg Fill % · last ${periodLabel}</th>
+            </tr>
+          </thead>
           <tbody>${tableRows}</tbody>
         </table>
       </div>
-      <div id="isolation-bar-slot"></div>
-      <div class="bundle-charts-row">
-        <div class="chart-panel">
-          <h4>Impressions by Bundle (1h)</h4>
-          <div class="chart-sub">Click a bar to isolate that bundle</div>
-          <div class="chart-wrap"><canvas id="chart-imps-bundle"></canvas></div>
-        </div>
-        <div class="chart-panel">
-          <h4>Fill Rate by Bundle (30m)</h4>
-          <div class="chart-sub">Click a bar to isolate that bundle</div>
-          <div class="chart-wrap"><canvas id="chart-fill-bundle"></canvas></div>
-        </div>
-      </div>
     `;
-
-    drawCombinedCharts();
   } catch (e) {
     document.getElementById('combined-body').innerHTML = `<div class="error-bar">⚠️ ${e.message}</div>`;
   }
 }
 
-function drawCombinedCharts() {
-  const impsSorted = (combinedImpsRange?.series ?? []).slice()
-    .sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
-  const fillSorted = (combinedFillRange?.series ?? []).slice()
-    .sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
-
-  const makeClickHandler = (otherCanvasId, otherSeries, otherUnit, otherRange) => (clickedLabel) => {
-    const bundle = clickedLabel.split(' / ')[0];
-    const fullLabel = clickedLabel;
-    if (isolatedSeriesLabel === fullLabel) {
-      isolatedSeriesLabel = null;
-      document.getElementById('isolation-bar-slot').innerHTML = '';
-    } else {
-      isolatedSeriesLabel = fullLabel;
-      document.getElementById('isolation-bar-slot').innerHTML = `
-        <div class="isolation-bar">
-          Showing: <strong>${bundle}</strong>
-          <button class="isolation-clear" onclick="clearBundleIsolation()">✕ Show all</button>
-        </div>`;
-    }
-    drawCombinedCharts();
-  };
-
-  const impsOpts = {
-    isolatedLabel: isolatedSeriesLabel,
-    onBarClick: makeClickHandler('chart-fill-bundle', fillSorted, '%', combinedFillRange),
-  };
-  const fillOpts = {
-    isolatedLabel: isolatedSeriesLabel,
-    onBarClick: makeClickHandler('chart-imps-bundle', impsSorted, 'imps', combinedImpsRange),
-  };
-
-  if (impsSorted.length && combinedImpsRange) {
-    drawChartOnCanvas('chart-imps-bundle', impsSorted, 'imps',
-      combinedImpsRange.stepMs, combinedImpsRange.startMs, combinedImpsRange.endMs, impsOpts);
-  }
-  if (fillSorted.length && combinedFillRange) {
-    drawChartOnCanvas('chart-fill-bundle', fillSorted, '%',
-      combinedFillRange.stepMs, combinedFillRange.startMs, combinedFillRange.endMs, fillOpts);
-  }
-}
-
 function clearBundleIsolation() {
   isolatedSeriesLabel = null;
-  document.getElementById('isolation-bar-slot').innerHTML = '';
-  drawCombinedCharts();
 }
 
 function downloadCombinedCsv() {
   const data = window._combinedBundleData;
   if (!data) return;
-  const rows = [['Endpoint', 'Bundle', 'Impressions (1h)', 'Fill Rate % (30m)']];
-  data.bundles.forEach(b => {
+  const rows = [['#', 'Endpoint', 'Bundle', `Total Imps (last ${data.periodLabel})`, `Avg Fill % (last ${data.periodLabel})`]];
+  data.bundles.forEach((b, i) => {
     const v = data.bundleMap[b];
-    rows.push([`"${globalEP}"`, `"${b}"`, v.imps ?? '', v.fill ?? '']);
+    rows.push([i+1, `"${globalEP}"`, `"${b}"`, v.imps ?? '', v.fill ?? '']);
   });
-  triggerCsvDownload(rows, `imps_fill_bundle_${globalEP}`);
+  triggerCsvDownload(rows, `imps_fill_bundle_${globalEP}_${data.periodLabel}`);
 }
 
 // ── Individual Metric View ───────────────────────────────────────
@@ -1301,10 +1304,73 @@ async function autoLoadAllSeriesChart() {
     if (!data) return;
     const sorted = data.series.slice().sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
     cachedRangeData = { ...data, series: sorted };
-    renderRangePanel(`All ${getCardDims(metricConf).join('/')}s`, cachedRangeData);
+    renderBundleTable(cachedRangeData, metricConf);
   } catch (e) {
     if (panel) panel.innerHTML = `<div class="error-bar">⚠️ ${e.message}</div>`;
   }
+}
+
+function renderBundleTable(data, metricConf) {
+  const panel = document.getElementById('chart-panel');
+  if (!panel) return;
+  const { metric, series } = data;
+  const isPercent = metric.unit === '%';
+  const cardDims = getCardDims(metricConf);
+  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+
+  // Aggregate over the time range: sum for counts, avg for percentages
+  const rows = series.map((s, i) => {
+    const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
+    const agg = vals.length
+      ? (isPercent ? vals.reduce((a,b)=>a+b,0)/vals.length : vals.reduce((a,b)=>a+b,0))
+      : null;
+    const bundleName = cardDims.map((_, di) => s.label.split(' / ')[di] ?? '?').join(' / ');
+    return { bundleName, value: agg, color: PALETTE[i % PALETTE.length] };
+  });
+
+  window._bundleTableData = { rows, metric, periodLabel };
+
+  const aggWord = isPercent ? 'Avg %' : 'Total';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <h3 style="flex:1;font-size:15px">All bundles · ${periodLabel}</h3>
+      <button class="refresh" style="padding:4px 10px;font-size:11px" onclick="downloadBundleTable()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download
+      </button>
+    </div>
+    <div style="overflow-y:auto;max-height:420px;border:1px solid var(--border);border-radius:8px">
+      <table class="bundle-table" style="width:100%">
+        <thead style="position:sticky;top:0;z-index:1">
+          <tr>
+            <th style="background:var(--surface2)">#</th>
+            <th style="background:var(--surface2)">Bundle</th>
+            <th style="background:var(--surface2)">${aggWord} · last ${periodLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r, i) => `
+            <tr>
+              <td style="color:var(--muted);width:36px">${i + 1}</td>
+              <td><span class="bundle-dot" style="background:${r.color}"></span>${r.bundleName}</td>
+              <td>${r.value !== null ? formatValue(r.value) + ' ' + metric.unit : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  updateSummaryFromRange(series, metric);
+}
+
+function downloadBundleTable() {
+  const d = window._bundleTableData;
+  if (!d) return;
+  const rows = [['#', 'Bundle', `Value (${d.periodLabel})`, 'Unit']];
+  d.rows.forEach((r, i) => rows.push([i+1, `"${r.bundleName}"`, r.value ?? '', `"${d.metric.unit}"`]));
+  triggerCsvDownload(rows, `${d.metric.name.replace(/\W+/g,'_')}_${globalEP}_${d.periodLabel}`);
 }
 
 async function refreshMetricChart() {
