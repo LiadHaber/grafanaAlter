@@ -153,143 +153,43 @@
     }
     .ep-clear-btn:hover { color: var(--red); }
 
-    /* Date Range Picker Button */
-    .drp-btn {
+    /* Date inputs (sidebar + modal) */
+    .date-input {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text);
-      padding: 8px 12px;
+      padding: 7px 10px;
       font-size: 12px;
       font-family: inherit;
-      cursor: pointer;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 7px;
+      outline: none;
+      color-scheme: dark;
       transition: border-color 0.15s;
     }
-    .drp-btn:hover { border-color: var(--accent); }
-    .drp-btn-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .drp-btn-arrow { color: var(--muted); font-size: 10px; }
-
-    /* Date Range Picker Popup */
-    .drp-popup {
-      position: fixed;
-      z-index: 1000;
-      background: #1e2235;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-      display: none;
-      flex-direction: row;
-    }
-    .drp-popup.open { display: flex; }
-
-    /* Presets */
-    .drp-presets {
-      width: 148px;
-      border-right: 1px solid var(--border);
-      padding: 10px 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .drp-preset-btn {
-      background: none;
-      border: none;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 13px;
-      padding: 9px 18px;
-      text-align: left;
-      cursor: pointer;
-      border-radius: 0;
-      transition: background 0.1s;
-    }
-    .drp-preset-btn:hover { background: var(--surface2); }
-    .drp-preset-btn.active { background: #7b2020; color: #fff; font-weight: 600; }
-
-    /* Calendars area */
-    .drp-right { display: flex; flex-direction: column; }
-    .drp-calendars { display: flex; gap: 0; padding: 16px 20px 8px; }
-
-    .drp-cal { min-width: 220px; }
-    .drp-cal + .drp-cal { margin-left: 24px; }
-
-    .drp-cal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .drp-cal-nav {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .drp-cal-nav:hover { border-color: var(--accent); color: var(--accent); }
-    .drp-cal-title { font-size: 14px; font-weight: 600; }
-
-    .drp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-    .drp-day-name {
-      text-align: center;
-      font-size: 11px;
+    .date-input:focus { border-color: var(--accent); }
+    .date-input-label {
+      font-size: 10px;
       color: var(--muted);
-      padding: 4px 0;
-      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 4px;
     }
-    .drp-day {
-      text-align: center;
-      font-size: 13px;
-      padding: 6px 4px;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text);
-      transition: background 0.1s;
-      border: 1px solid transparent;
-      user-select: none;
-    }
-    .drp-day:hover:not(.drp-day-other):not(.drp-day-disabled) { background: var(--surface2); border-color: var(--border); }
-    .drp-day-other { color: var(--muted); opacity: 0.4; cursor: default; }
-    .drp-day-disabled { color: var(--muted); opacity: 0.3; cursor: default; }
-    .drp-day-start, .drp-day-end { background: #7b2020 !important; color: #fff !important; font-weight: 700; }
-    .drp-day-range { background: rgba(123,32,32,0.25); border-radius: 0; }
-    .drp-day-start { border-radius: 6px 0 0 6px; }
-    .drp-day-end { border-radius: 0 6px 6px 0; }
-    .drp-day-start.drp-day-end { border-radius: 6px !important; }
-    .drp-day-today { border-color: var(--accent) !important; }
-
-    /* Picker footer */
-    .drp-footer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 20px 14px;
-      border-top: 1px solid var(--border);
-    }
-    .drp-range-text { flex: 1; font-size: 13px; color: var(--muted); font-family: monospace; }
-    .drp-apply-btn {
-      background: #7b2020;
+    .btn-apply {
+      background: var(--accent);
       border: none;
       color: #fff;
       border-radius: 8px;
-      padding: 7px 18px;
+      padding: 8px;
       font-size: 13px;
       font-family: inherit;
       cursor: pointer;
       font-weight: 600;
+      width: 100%;
       transition: opacity 0.15s;
+      margin-top: 2px;
     }
-    .drp-apply-btn:hover { opacity: 0.85; }
+    .btn-apply:hover { opacity: 0.85; }
 
     /* Sidebar Download section */
     .sidebar-dl-btn {
@@ -754,12 +654,15 @@
     <!-- Date Range -->
     <div class="sidebar-section">
       <span class="sidebar-section-title">Date Range</span>
-      <div style="padding: 0 12px;">
-        <button class="drp-btn" id="drp-toggle" onclick="toggleDrp(event)">
-          <span>📅</span>
-          <span class="drp-btn-label" id="drp-btn-label">Loading...</span>
-          <span class="drp-btn-arrow">▼</span>
-        </button>
+      <div style="padding: 0 12px; display:flex; flex-direction:column; gap:8px;">
+        <div>
+          <div class="date-input-label">From</div>
+          <input type="date" id="sidebar-from" class="date-input" onchange="applySidebarDateRange()" />
+        </div>
+        <div>
+          <div class="date-input-label">To</div>
+          <input type="date" id="sidebar-to" class="date-input" onchange="applySidebarDateRange()" />
+        </div>
       </div>
     </div>
 
@@ -798,30 +701,6 @@
   </div>
 </main>
 
-<!-- Date Range Picker Popup -->
-<div class="drp-popup" id="drp-popup" onclick="event.stopPropagation()">
-  <div class="drp-presets">
-    <button class="drp-preset-btn" onclick="drpSelectPreset('today')">Today</button>
-    <button class="drp-preset-btn" onclick="drpSelectPreset('yesterday')">Yesterday</button>
-    <button class="drp-preset-btn" onclick="drpSelectPreset('7d')">Last 7 Days</button>
-    <button class="drp-preset-btn" onclick="drpSelectPreset('30d')">Last 30 Days</button>
-    <button class="drp-preset-btn" onclick="drpSelectPreset('thisMonth')">This Month</button>
-    <button class="drp-preset-btn" onclick="drpSelectPreset('lastMonth')">Last Month</button>
-    <button class="drp-preset-btn" id="drp-preset-custom" onclick="drpSelectPreset('custom')">Custom Range</button>
-  </div>
-  <div class="drp-right">
-    <div class="drp-calendars">
-      <div class="drp-cal" id="drp-cal-left"></div>
-      <div class="drp-cal" id="drp-cal-right"></div>
-    </div>
-    <div class="drp-footer">
-      <span class="drp-range-text" id="drp-range-text">—</span>
-      <button class="header-btn" onclick="closeDrp()">Cancel</button>
-      <button class="drp-apply-btn" onclick="drpApply()">Apply</button>
-    </div>
-  </div>
-</div>
-
 <!-- Download Modal -->
 <div class="modal-backdrop" id="download-modal" style="display:none" onclick="if(event.target===this)closeDownloadModal()">
   <div class="modal-box">
@@ -836,11 +715,11 @@
       <div style="display:flex;gap:12px">
         <div style="flex:1">
           <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">From</div>
-          <input type="date" id="modal-from" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:12px;font-family:inherit;outline:none;color-scheme:dark" />
+          <input type="date" id="modal-from" class="date-input" />
         </div>
         <div style="flex:1">
           <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">To</div>
-          <input type="date" id="modal-to" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:12px;font-family:inherit;outline:none;color-scheme:dark" />
+          <input type="date" id="modal-to" class="date-input" />
         </div>
       </div>
     </div>
@@ -1126,285 +1005,37 @@ document.addEventListener('click', e => {
   }
 });
 
-// ── Date Range Picker ─────────────────────────────────────────────
-const DRP_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DRP_DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+// ── Date Range ────────────────────────────────────────────────────
 
-let drp = {
-  open: false,
-  leftYear: 0, leftMonth: 0,    // displayed months
-  rightYear: 0, rightMonth: 0,
-  selectStart: null,             // Date objects (midnight local)
-  selectEnd: null,
-  hoverDate: null,
-  preset: '7d'
-};
-
-function drpDateStr(d) {
+function toDateInputVal(ts) {
+  const d = new Date(ts * 1000);
   const pad = n => String(n).padStart(2,'0');
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-
-function drpParseStr(s) { // 'YYYY-MM-DD' → Date at local midnight
-  const [y,m,d] = s.split('-').map(Number);
-  return new Date(y, m-1, d);
-}
-
-function drpFmtDisplay(d) {
-  const pad = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-
-function drpUpdateRangeText() {
-  const el = document.getElementById('drp-range-text');
-  if (!el) return;
-  if (drp.selectStart && drp.selectEnd)
-    el.textContent = `${drpFmtDisplay(drp.selectStart)} — ${drpFmtDisplay(drp.selectEnd)}`;
-  else if (drp.selectStart)
-    el.textContent = `${drpFmtDisplay(drp.selectStart)} — ...`;
-  else
-    el.textContent = '—';
-}
-
-function drpRenderCal(side) {
-  const year = drp[side+'Year'], month = drp[side+'Month'];
-  const el = document.getElementById(`drp-cal-${side}`);
-  if (!el) return;
-  const firstDay = new Date(year, month, 1);
-  const lastDay  = new Date(year, month+1, 0);
-  // Mon=0 offset
-  let startDow = firstDay.getDay(); // 0=Sun
-  startDow = startDow === 0 ? 6 : startDow - 1; // shift so Mon=0
-
-  const today = drpDateStr(new Date());
-  const selStart = drp.selectStart ? drpDateStr(drp.selectStart) : null;
-  const selEnd   = drp.selectEnd   ? drpDateStr(drp.selectEnd)   : null;
-  const hov      = drp.hoverDate;
-
-  // effective end for hover highlight
-  const effEnd = selEnd || hov;
-
-  const header = `
-    <div class="drp-cal-header">
-      ${side==='left'
-        ? `<button class="drp-cal-nav" onclick="drpNav(-1)">‹</button>`
-        : `<button class="drp-cal-nav" style="visibility:hidden">‹</button>`}
-      <span class="drp-cal-title">${DRP_MONTHS[month]} ${year}</span>
-      ${side==='right'
-        ? `<button class="drp-cal-nav" onclick="drpNav(1)">›</button>`
-        : `<button class="drp-cal-nav" style="visibility:hidden">›</button>`}
-    </div>`;
-
-  const dayNames = DRP_DAYS.map(d=>`<div class="drp-day-name">${d}</div>`).join('');
-
-  let cells = '';
-  // leading blanks
-  for (let i=0; i<startDow; i++) cells += `<div class="drp-day drp-day-other"></div>`;
-
-  for (let d=1; d<=lastDay.getDate(); d++) {
-    const date = new Date(year, month, d);
-    const ds = drpDateStr(date);
-
-    const isStart = ds === selStart;
-    const isEnd   = ds === selEnd;
-    const isToday = ds === today;
-
-    let inRange = false;
-    if (selStart && effEnd) {
-      const s = selStart < effEnd ? selStart : effEnd;
-      const e = selStart < effEnd ? effEnd : selStart;
-      inRange = ds > s && ds < e;
-    }
-
-    let cls = 'drp-day';
-    if (isStart) cls += ' drp-day-start';
-    if (isEnd)   cls += ' drp-day-end';
-    if (isStart && isEnd) cls += ' drp-day-end'; // same day
-    if (inRange) cls += ' drp-day-range';
-    if (isToday) cls += ' drp-day-today';
-
-    cells += `<div class="${cls}" onclick="drpDayClick('${ds}')" onmouseenter="drpDayHover('${ds}')">${d}</div>`;
-  }
-
-  // trailing blanks to fill grid
-  const totalCells = startDow + lastDay.getDate();
-  const rem = totalCells % 7;
-  if (rem) for (let i=0; i<7-rem; i++) cells += `<div class="drp-day drp-day-other"></div>`;
-
-  el.innerHTML = header + `<div class="drp-grid">${dayNames}${cells}</div>`;
-}
-
-function drpRender() {
-  drpRenderCal('left');
-  drpRenderCal('right');
-  drpUpdateRangeText();
-}
-
-function drpNav(dir) {
-  let m = drp.leftMonth + dir, y = drp.leftYear;
-  if (m < 0) { m = 11; y--; }
-  if (m > 11) { m = 0; y++; }
-  drp.leftYear = y; drp.leftMonth = m;
-  const rm = m + 1 > 11 ? 0 : m + 1;
-  const ry = m + 1 > 11 ? y + 1 : y;
-  drp.rightYear = ry; drp.rightMonth = rm;
-  drp.preset = 'custom';
-  drpHighlightPreset();
-  drpRender();
-}
-
-function drpDayClick(ds) {
-  const date = drpParseStr(ds);
-  if (!drp.selectStart || (drp.selectStart && drp.selectEnd)) {
-    // start fresh selection
-    drp.selectStart = date;
-    drp.selectEnd = null;
-    drp.hoverDate = null;
-  } else {
-    // second click = end — auto-apply immediately
-    if (ds < drpDateStr(drp.selectStart)) {
-      drp.selectEnd = drp.selectStart;
-      drp.selectStart = date;
-    } else {
-      drp.selectEnd = date;
-    }
-    drp.hoverDate = null;
-    drp.preset = 'custom';
-    drpHighlightPreset();
-    drpRender();
-    drpApply();
-    return;
-  }
-  drp.preset = 'custom';
-  drpHighlightPreset();
-  drpRender();
-}
-
-function drpDayHover(ds) {
-  if (drp.selectStart && !drp.selectEnd) {
-    drp.hoverDate = ds;
-    drpRender();
-  }
-}
-
-function drpSelectPreset(name) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let s, e;
-  if (name === 'today') {
-    s = today; e = today;
-  } else if (name === 'yesterday') {
-    const y = new Date(today); y.setDate(y.getDate()-1);
-    s = y; e = y;
-  } else if (name === '7d') {
-    s = new Date(today); s.setDate(s.getDate()-6); e = today;
-  } else if (name === '30d') {
-    s = new Date(today); s.setDate(s.getDate()-29); e = today;
-  } else if (name === 'thisMonth') {
-    s = new Date(now.getFullYear(), now.getMonth(), 1); e = today;
-  } else if (name === 'lastMonth') {
-    s = new Date(now.getFullYear(), now.getMonth()-1, 1);
-    e = new Date(now.getFullYear(), now.getMonth(), 0);
-  } else {
-    drp.preset = 'custom';
-    drpHighlightPreset();
-    drpRender();
-    return;
-  }
-  drp.selectStart = s;
-  drp.selectEnd = e;
-  drp.hoverDate = null;
-  drp.preset = name;
-  // navigate left calendar to show the start month
-  drp.leftYear = s.getFullYear(); drp.leftMonth = s.getMonth();
-  const rm = drp.leftMonth+1 > 11 ? 0 : drp.leftMonth+1;
-  const ry = drp.leftMonth+1 > 11 ? drp.leftYear+1 : drp.leftYear;
-  drp.rightYear = ry; drp.rightMonth = rm;
-  drpHighlightPreset();
-  drpRender();
-  // Presets auto-apply immediately
-  drpApply();
-}
-
-function drpHighlightPreset() {
-  document.querySelectorAll('.drp-preset-btn').forEach(btn => btn.classList.remove('active'));
-  const map = { today:'today', yesterday:'yesterday', '7d':'7d', '30d':'30d', thisMonth:'thisMonth', lastMonth:'lastMonth', custom:'custom' };
-  const presetOrder = ['today','yesterday','7d','30d','thisMonth','lastMonth','custom'];
-  const idx = presetOrder.indexOf(drp.preset);
-  const btns = document.querySelectorAll('.drp-preset-btn');
-  if (idx >= 0 && btns[idx]) btns[idx].classList.add('active');
-}
-
-function toggleDrp(event) {
-  event.stopPropagation();
-  const popup = document.getElementById('drp-popup');
-  if (drp.open) { closeDrp(); return; }
-  // position popup below the button
-  const btn = document.getElementById('drp-toggle');
-  const rect = btn.getBoundingClientRect();
-  popup.style.top = (rect.bottom + 6) + 'px';
-  popup.style.left = rect.left + 'px';
-  drp.open = true;
-  popup.classList.add('open');
-  drpRender();
-}
-
-function closeDrp() {
-  drp.open = false;
-  const popup = document.getElementById('drp-popup');
-  if (popup) popup.classList.remove('open');
-}
-
-function drpApply() {
-  if (!drp.selectStart) return;
-  const end = drp.selectEnd || drp.selectStart;
-  // start = beginning of start day, end = end of end day (23:59:59)
-  globalStart = Math.floor(drp.selectStart.getTime() / 1000);
-  globalEnd   = Math.floor(end.getTime() / 1000) + 86399;
-  drpUpdateButtonLabel();
-  closeDrp();
-  if (activeView === '_overview') renderOverview();
-  else if (activeView === '_combined') renderCombined();
-  else if (activeView && cachedRangeData) refreshMetricChart();
-}
-
-function drpUpdateButtonLabel() {
-  const el = document.getElementById('drp-btn-label');
-  if (!el || !globalStart || !globalEnd) return;
-  const fmt = ts => {
-    const d = new Date(ts * 1000);
-    return drpFmtDisplay(d);
-  };
-  el.textContent = `${fmt(globalStart)} – ${fmt(globalEnd)}`;
 }
 
 function initDatePicker() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(today.getDate() - 6);
-
-  drp.selectStart = sevenDaysAgo;
-  drp.selectEnd = today;
-  drp.preset = '7d';
-  drp.leftYear = sevenDaysAgo.getFullYear(); drp.leftMonth = sevenDaysAgo.getMonth();
-  const rm = drp.leftMonth+1 > 11 ? 0 : drp.leftMonth+1;
-  const ry = drp.leftMonth+1 > 11 ? drp.leftYear+1 : drp.leftYear;
-  drp.rightYear = ry; drp.rightMonth = rm;
-
   globalStart = Math.floor(sevenDaysAgo.getTime() / 1000);
   globalEnd   = Math.floor(today.getTime() / 1000) + 86399;
-  drpUpdateButtonLabel();
-  drpHighlightPreset();
+  document.getElementById('sidebar-from').value = toDateInputVal(globalStart);
+  document.getElementById('sidebar-to').value   = toDateInputVal(globalEnd);
 }
 
-// Close picker when clicking outside
-document.addEventListener('click', e => {
-  if (!drp.open) return;
-  const popup = document.getElementById('drp-popup');
-  const btn = document.getElementById('drp-toggle');
-  const path = e.composedPath();
-  if (popup && !path.includes(popup) && btn && !path.includes(btn)) closeDrp();
-});
+function applySidebarDateRange() {
+  const fromVal = document.getElementById('sidebar-from').value;
+  const toVal   = document.getElementById('sidebar-to').value;
+  if (!fromVal || !toVal) return;
+  const start = Math.floor(new Date(fromVal).getTime() / 1000);
+  const end   = Math.floor(new Date(toVal).getTime()   / 1000) + 86399;
+  if (start >= end) return;
+  globalStart = start;
+  globalEnd   = end;
+  if (activeView === '_overview') renderOverview();
+  else if (activeView === '_combined') renderCombined();
+  else if (activeView && cachedRangeData) refreshMetricChart();
+}
 
 function rangeQueryParams() {
   if (globalStart && globalEnd) return `start=${globalStart}&end=${globalEnd}`;
@@ -2151,11 +1782,6 @@ function filterCards(query) {
 // ── Download Modal ───────────────────────────────────────────────
 function openDownloadModal() {
   // Set date inputs from current global range
-  const toDateInputVal = ts => {
-    const d = new Date(ts * 1000);
-    const pad = n => String(n).padStart(2,'0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  };
   if (globalStart) document.getElementById('modal-from').value = toDateInputVal(globalStart);
   if (globalEnd)   document.getElementById('modal-to').value   = toDateInputVal(globalEnd);
 
