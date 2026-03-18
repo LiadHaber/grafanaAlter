@@ -1245,7 +1245,7 @@ function drpDayClick(ds) {
     drp.selectEnd = null;
     drp.hoverDate = null;
   } else {
-    // second click = end
+    // second click = end — auto-apply immediately
     if (ds < drpDateStr(drp.selectStart)) {
       drp.selectEnd = drp.selectStart;
       drp.selectStart = date;
@@ -1253,6 +1253,11 @@ function drpDayClick(ds) {
       drp.selectEnd = date;
     }
     drp.hoverDate = null;
+    drp.preset = 'custom';
+    drpHighlightPreset();
+    drpRender();
+    drpApply();
+    return;
   }
   drp.preset = 'custom';
   drpHighlightPreset();
@@ -1301,6 +1306,8 @@ function drpSelectPreset(name) {
   drp.rightYear = ry; drp.rightMonth = rm;
   drpHighlightPreset();
   drpRender();
+  // Presets auto-apply immediately
+  drpApply();
 }
 
 function drpHighlightPreset() {
