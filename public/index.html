@@ -799,7 +799,7 @@
 </main>
 
 <!-- Date Range Picker Popup -->
-<div class="drp-popup" id="drp-popup">
+<div class="drp-popup" id="drp-popup" onclick="event.stopPropagation()">
   <div class="drp-presets">
     <button class="drp-preset-btn" onclick="drpSelectPreset('today')">Today</button>
     <button class="drp-preset-btn" onclick="drpSelectPreset('yesterday')">Yesterday</button>
@@ -829,9 +829,25 @@
       Download CSV
       <button class="modal-close" onclick="closeDownloadModal()">✕</button>
     </div>
+
+    <!-- Date range for export -->
+    <div>
+      <div class="modal-section-label" style="margin-bottom:8px">Date Range</div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">From</div>
+          <input type="date" id="modal-from" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:12px;font-family:inherit;outline:none;color-scheme:dark" />
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">To</div>
+          <input type="date" id="modal-to" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:12px;font-family:inherit;outline:none;color-scheme:dark" />
+        </div>
+      </div>
+    </div>
+
     <div>
       <div class="modal-section-label">
-        Metrics
+        Metrics (columns)
         <button class="modal-toggle" onclick="modalToggleAll('modal-metric-cb', true)">All</button>
         <button class="modal-toggle" onclick="modalToggleAll('modal-metric-cb', false)">None</button>
       </div>
@@ -839,7 +855,7 @@
     </div>
     <div>
       <div class="modal-section-label">
-        Endpoints
+        Tags / Endpoints (rows)
         <button class="modal-toggle" onclick="modalToggleAll('modal-ep-cb', true)">All</button>
         <button class="modal-toggle" onclick="modalToggleAll('modal-ep-cb', false)">None</button>
       </div>
@@ -2134,6 +2150,15 @@ function filterCards(query) {
 
 // ── Download Modal ───────────────────────────────────────────────
 function openDownloadModal() {
+  // Set date inputs from current global range
+  const toDateInputVal = ts => {
+    const d = new Date(ts * 1000);
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  };
+  if (globalStart) document.getElementById('modal-from').value = toDateInputVal(globalStart);
+  if (globalEnd)   document.getElementById('modal-to').value   = toDateInputVal(globalEnd);
+
   const metricsList = document.getElementById('modal-metrics-list');
   metricsList.innerHTML = allMetrics.map(m => `
     <label class="modal-check-item">
@@ -2164,47 +2189,53 @@ function modalToggleAll(cls, checked) {
 async function executeModalDownload() {
   const selectedMetricIds = [...document.querySelectorAll('.modal-metric-cb:checked')].map(cb => cb.value);
   const selectedEPs = [...document.querySelectorAll('.modal-ep-cb:checked')].map(cb => cb.value);
+  const fromVal = document.getElementById('modal-from').value;
+  const toVal   = document.getElementById('modal-to').value;
 
   if (!selectedMetricIds.length || !selectedEPs.length) {
     alert('Select at least one metric and one endpoint.');
     return;
   }
+  if (!fromVal || !toVal) { alert('Select a date range.'); return; }
+
+  const dlStart = Math.floor(new Date(fromVal).getTime() / 1000);
+  const dlEnd   = Math.floor(new Date(toVal).getTime() / 1000) + 86399;
+  if (dlStart >= dlEnd) { alert('From must be before To.'); return; }
+  const dlParams = `start=${dlStart}&end=${dlEnd}`;
 
   const btn = document.getElementById('modal-dl-btn');
   btn.textContent = 'Fetching…';
   btn.disabled = true;
 
-  const periodLabel = getPeriodLabel();
-  const fromStr = globalStart ? new Date(globalStart * 1000).toISOString().slice(0,16).replace('T',' ') : '';
-  const toStr   = globalEnd   ? new Date(globalEnd   * 1000).toISOString().slice(0,16).replace('T',' ') : '';
-
   try {
-    const rows = [['Endpoint', 'Metric', 'Label', `Value (${periodLabel})`, 'Unit', 'From', 'To']];
+    const selectedMetrics = selectedMetricIds.map(id => allMetrics.find(m => m.id === id)).filter(Boolean);
+    // Header: Tag/EP | Metric1 | Metric2 | ... | From | To
+    const header = ['Tag / Endpoint', ...selectedMetrics.map(m => m.name), 'From', 'To'];
+    const rows = [header];
 
-    for (const metricId of selectedMetricIds) {
-      const metricConf = allMetrics.find(m => m.id === metricId);
-      const filterDim = getFilterDim(metricConf);
-      const cardDims = getCardDims(metricConf);
-      const isPercent = metricConf.unit === '%';
-      try {
-        for (const ep of selectedEPs) {
+    for (const ep of selectedEPs) {
+      const rowVals = [ep];
+      for (const metricConf of selectedMetrics) {
+        const filterDim = getFilterDim(metricConf);
+        const isPercent = metricConf.unit === '%';
+        try {
           const labelFilter = filterDim ? { [filterDim]: ep } : { job: ep };
           const labelsParam = encodeURIComponent(JSON.stringify(labelFilter));
-          const data = await apiFetch(`/api/metrics/${metricId}/range?labels=${labelsParam}&${rangeQueryParams()}`);
-          if (!data?.series?.length) continue;
-          for (const s of data.series) {
-            const vals = s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v));
-            const agg = vals.length
-              ? (isPercent ? vals.reduce((a,b)=>a+b,0)/vals.length : vals.reduce((a,b)=>a+b,0))
-              : null;
-            const labelParts = cardDims.map((_, di) => s.label.split(' / ')[di] ?? '?').join(' / ');
-            rows.push([`"${ep}"`, `"${data.metric.name}"`, `"${labelParts}"`, agg ?? '', `"${data.metric.unit}"`, `"${fromStr}"`, `"${toStr}"`]);
-          }
-        }
-      } catch (_) {}
+          const data = await apiFetch(`/api/metrics/${metricConf.id}/range?labels=${labelsParam}&${dlParams}`);
+          if (!data?.series?.length) { rowVals.push(''); continue; }
+          const allVals = data.series.flatMap(s => s.points.map(p => p.value).filter(v => v !== null && Number.isFinite(v)));
+          if (!allVals.length) { rowVals.push(''); continue; }
+          const agg = isPercent
+            ? allVals.reduce((a,b) => a+b, 0) / allVals.length
+            : allVals.reduce((a,b) => a+b, 0);
+          rowVals.push(agg.toFixed(2));
+        } catch (_) { rowVals.push(''); }
+      }
+      rowVals.push(fromVal, toVal);
+      rows.push(rowVals);
     }
 
-    triggerCsvDownload(rows, `metrics_export_${periodLabel}`);
+    triggerCsvDownload(rows, `metrics_export_${fromVal}_to_${toVal}`);
     closeDownloadModal();
   } finally {
     btn.textContent = 'Download CSV';
