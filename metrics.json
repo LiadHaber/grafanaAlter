@@ -1,0 +1,51 @@
+{
+  "prometheusUrl": "http://212.56.35.58:9090",
+  "metrics": [
+    {
+      "id": "fill_rate_1h",
+      "name": "Fill Rate (1h)",
+      "rule": "fillRateByEP:1h",
+      "window": "1h",
+      "unit": "%",
+      "description": "Percentage of impressions filled per endpoint (1-hour window)",
+      "labelDimension": "job"
+    },
+    {
+      "id": "increase1hByEP:imps",
+      "name": "Impressions (1h)",
+      "rule": "increase1hByEP:imps",
+      "window": "1h",
+      "unit": "imps",
+      "description": "Total impressions per endpoint over the last hour",
+      "labelDimension": "job"
+    },
+    {
+      "id": "increase30mByEP:reqs",
+      "name": "Requests (30m)",
+      "rule": "increase30mByEP:reqs",
+      "window": "30m",
+      "unit": "reqs",
+      "description": "Total requests per endpoint over the last 30 minutes",
+      "labelDimension": "job"
+    },
+    {
+      "id": "fillRateByBundle:30m",
+      "name": "Fill Rate By Bundle (30m)",
+      "rule": "fillRateByBundle:30m",
+      "window": "30m",
+      "unit": "%",
+      "description": "Fill Rate By Bundle (30-minute window)",
+      "labelDimension": ["bundle", "job"]
+    },
+    {
+      "id": "impsByBundle:1h",
+      "name": "Impressions By Bundle (1h)",
+      "rule": "impsByBundle:1h",
+      "window": "1h",
+      "unit": "imps",
+      "description": "Impressions By Bundle (1-hour window)",
+      "labelDimension": ["bundle", "job"]
+    }
+    
+  ]
+}

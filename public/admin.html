@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetricsDash Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #6c8eff;
+      --text: #e2e8f0;
+      --muted: #8892b0;
+      --red: #f87171;
+      --green: #4ade80;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    header .logo span { color: var(--accent); }
+    header .spacer { flex: 1; }
+
+    .header-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s;
+    }
+    .header-btn:hover { border-color: var(--accent); color: var(--accent); }
+    button.header-btn { font-family: inherit; }
+
+    /* ── Main ── */
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 24px; }
+
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .btn-primary {
+      padding: 8px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    td {
+      padding: 12px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-admin { background: rgba(108,142,255,0.18); color: var(--accent); }
+    .badge-user  { background: rgba(136,146,176,0.18); color: var(--muted); }
+    .badge-active   { background: rgba(74,222,128,0.15); color: var(--green); cursor: pointer; }
+    .badge-disabled { background: rgba(248,113,113,0.15); color: var(--red); cursor: pointer; }
+
+    .actions { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--text); }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 100%;
+      max-width: 460px;
+    }
+
+    .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .form-field input:focus,
+    .form-field select:focus { border-color: var(--accent); }
+    .form-field input[readonly] { opacity: 0.6; cursor: default; }
+    .form-field input[type="checkbox"] {
+      width: auto;
+      padding: 0;
+    }
+
+    .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+    .pattern-row { display: none; }
+    .pattern-row.visible { display: block; }
+
+    .modal-error {
+      display: none;
+      padding: 8px 12px;
+      background: rgba(248,113,113,0.12);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .modal-error.visible { display: block; }
+
+    .empty-row td { text-align: center; color: var(--muted); padding: 32px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Metrics<span>Dash</span> Admin</div>
+  <div class="spacer"></div>
+  <a href="/" class="header-btn">← Dashboard</a>
+  <button class="header-btn" onclick="logout()">Log out</button>
+</header>
+
+<main>
+  <div class="section-header" style="margin-bottom:24px">
+    <h2 style="margin-bottom:0">Configuration</h2>
+    <button class="header-btn" onclick="reloadMetrics()" id="reload-btn">↺ Reload metrics.json</button>
+  </div>
+
+  <div class="section-header">
+    <h2>Users</h2>
+    <button class="btn-primary" onclick="openAddModal()">+ Add User</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="users-table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Access</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody">
+        <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Add User</h3>
+    <div class="modal-error" id="modal-error"></div>
+
+    <div class="form-field" id="field-email">
+      <label for="f-email">Email</label>
+      <input type="text" id="f-email" placeholder="user@example.com" />
+    </div>
+
+    <div class="form-field">
+      <label for="f-name">Name</label>
+      <input type="text" id="f-name" placeholder="Display name" />
+    </div>
+
+    <div class="form-field">
+      <label for="f-password">Password</label>
+      <input type="password" id="f-password" placeholder="••••••••" />
+      <div class="form-hint" id="pw-hint"></div>
+    </div>
+
+    <div class="form-field">
+      <label for="f-role">Role</label>
+      <select id="f-role">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="f-filter-type">Job Filter Type</label>
+      <select id="f-filter-type" onchange="onFilterTypeChange()">
+        <option value="all">All jobs</option>
+        <option value="exclude">Exclude pattern</option>
+        <option value="only">Only pattern</option>
+      </select>
+    </div>
+
+    <div class="form-field pattern-row" id="pattern-row">
+      <label for="f-pattern">Pattern</label>
+      <input type="text" id="f-pattern" placeholder="e.g. shtz" />
+    </div>
+
+    <div class="form-field" id="field-active" style="display:none">
+      <label>
+        <input type="checkbox" id="f-active" style="margin-right:6px;" />
+        Active (uncheck to disable account)
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="header-btn" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentUserId = null; // own id
+let editingUserId = null; // null = add mode
+let usersCache = [];
+
+async function init() {
+  const res = await fetch('/auth/me');
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  const me = await res.json();
+  currentUserId = me.id;
+  await loadUsers();
+}
+
+async function loadUsers() {
+  const res = await fetch('/api/admin/users');
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  if (res.status === 403) { window.location.href = '/'; return; }
+  usersCache = await res.json();
+  renderTable();
+}
+
+function filterDesc(jobFilter) {
+  if (!jobFilter || jobFilter.type === 'all') return 'All jobs';
+  if (jobFilter.type === 'exclude') return `Excludes: ${jobFilter.pattern}`;
+  if (jobFilter.type === 'only') return `Only: ${jobFilter.pattern}`;
+  return jobFilter.type;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('users-tbody');
+  if (!usersCache.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No users found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = usersCache.map(u => {
+    const isSelf = u.id === currentUserId;
+    const roleBadge = u.role === 'admin'
+      ? '<span class="badge badge-admin">admin</span>'
+      : '<span class="badge badge-user">user</span>';
+    const statusBadge = u.disabled
+      ? `<span class="badge badge-disabled" onclick="toggleDisabled('${u.id}', true)" title="Click to enable">Disabled</span>`
+      : `<span class="badge badge-active" onclick="toggleDisabled('${u.id}', false)" title="Click to disable">Active</span>`;
+    const deleteBtnDisabled = isSelf ? 'disabled' : '';
+    return `
+      <tr>
+        <td>${escHtml(u.email)}</td>
+        <td>${escHtml(u.name || '')}</td>
+        <td>${roleBadge}</td>
+        <td style="color:var(--muted);font-size:13px">${filterDesc(u.jobFilter)}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <div class="actions">
+            <button class="btn-sm" onclick="openEditModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Edit</button>
+            <button class="btn-sm danger" onclick="deleteUser('${u.id}')" ${deleteBtnDisabled}>Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function onFilterTypeChange() {
+  const type = document.getElementById('f-filter-type').value;
+  const patRow = document.getElementById('pattern-row');
+  patRow.classList.toggle('visible', type === 'exclude' || type === 'only');
+}
+
+function openAddModal() {
+  editingUserId = null;
+  document.getElementById('modal-title').textContent = 'Add User';
+  document.getElementById('f-email').value = '';
+  document.getElementById('f-email').readOnly = false;
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-password').value = '';
+  document.getElementById('f-password').placeholder = '••••••••';
+  document.getElementById('pw-hint').textContent = 'Required for new user';
+  document.getElementById('f-role').value = 'user';
+  document.getElementById('f-filter-type').value = 'all';
+  document.getElementById('f-pattern').value = '';
+  document.getElementById('pattern-row').classList.remove('visible');
+  document.getElementById('field-active').style.display = 'none';
+  document.getElementById('modal-error').classList.remove('visible');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openEditModal(user) {
+  editingUserId = user.id;
+  document.getElementById('modal-title').textContent = 'Edit User';
+  document.getElementById('f-email').value = user.email;
+  document.getElementById('f-email').readOnly = true;
+  document.getElementById('f-name').value = user.name || '';
+  document.getElementById('f-password').value = '';
+  document.getElementById('f-password').placeholder = 'Leave blank to keep current';
+  document.getElementById('pw-hint').textContent = 'Leave blank to keep current password';
+  document.getElementById('f-role').value = user.role || 'user';
+
+  const jf = user.jobFilter || { type: 'all' };
+  document.getElementById('f-filter-type').value = jf.type || 'all';
+  document.getElementById('f-pattern').value = jf.pattern || '';
+  const showPat = jf.type === 'exclude' || jf.type === 'only';
+  document.getElementById('pattern-row').classList.toggle('visible', showPat);
+
+  document.getElementById('field-active').style.display = 'block';
+  document.getElementById('f-active').checked = !user.disabled;
+
+  document.getElementById('modal-error').classList.remove('visible');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+async function saveUser() {
+  const errorEl = document.getElementById('modal-error');
+  errorEl.classList.remove('visible');
+
+  const email = document.getElementById('f-email').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const password = document.getElementById('f-password').value;
+  const role = document.getElementById('f-role').value;
+  const filterType = document.getElementById('f-filter-type').value;
+  const pattern = document.getElementById('f-pattern').value.trim();
+
+  const jobFilter = { type: filterType };
+  if (filterType !== 'all') jobFilter.pattern = pattern;
+
+  const body = { name, role, jobFilter };
+
+  if (editingUserId) {
+    // Edit mode
+    if (password) body.password = password;
+    body.disabled = !document.getElementById('f-active').checked;
+
+    const res = await fetch(`/api/admin/users/${editingUserId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Failed to update user';
+      errorEl.classList.add('visible');
+      return;
+    }
+  } else {
+    // Add mode
+    if (!email) { errorEl.textContent = 'Email is required'; errorEl.classList.add('visible'); return; }
+    if (!password) { errorEl.textContent = 'Password is required'; errorEl.classList.add('visible'); return; }
+    body.email = email;
+    body.password = password;
+
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Failed to create user';
+      errorEl.classList.add('visible');
+      return;
+    }
+  }
+
+  closeModal();
+  await loadUsers();
+}
+
+async function deleteUser(id) {
+  if (!confirm('Delete this user? This cannot be undone.')) return;
+  const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || 'Failed to delete user'); return; }
+  await loadUsers();
+}
+
+async function toggleDisabled(id, currentDisabled) {
+  if (!currentDisabled) {
+    if (!confirm('Disable this user? They will be logged out immediately.')) return;
+  }
+  const res = await fetch(`/api/admin/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ disabled: !currentDisabled }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || 'Failed to update user'); return; }
+  await loadUsers();
+}
+
+async function reloadMetrics() {
+  const btn = document.getElementById('reload-btn');
+  btn.disabled = true;
+  btn.textContent = 'Reloading…';
+  try {
+    const res = await fetch('/api/admin/reload-metrics', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      btn.textContent = `✓ Loaded ${data.count} metrics`;
+      setTimeout(() => { btn.textContent = '↺ Reload metrics.json'; btn.disabled = false; }, 2500);
+    } else {
+      btn.textContent = '✗ ' + (data.error || 'Error');
+      setTimeout(() => { btn.textContent = '↺ Reload metrics.json'; btn.disabled = false; }, 3000);
+    }
+  } catch {
+    btn.textContent = '✗ Network error';
+    setTimeout(() => { btn.textContent = '↺ Reload metrics.json'; btn.disabled = false; }, 3000);
+  }
+}
+
+function logout() {
+  fetch('/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login'; });
+}
+
+// Close modal on overlay click
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+init();
+</script>
+</body>
+</html>

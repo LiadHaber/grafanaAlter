@@ -1,0 +1,16 @@
+{
+  "name": "grafna-alter",
+  "version": "1.0.0",
+  "description": "Simple Prometheus dashboard for non-developer users",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "node-fetch": "^3.3.2"
+  }
+}

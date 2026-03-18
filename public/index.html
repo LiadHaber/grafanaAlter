@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metrics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #6c8eff;
+      --accent2: #a78bfa;
+      --text: #e2e8f0;
+      --muted: #8892b0;
+      --green: #4ade80;
+      --red: #f87171;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    header .logo span { color: var(--accent); }
+    .header-user { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .header-btn {
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s;
+    }
+    .header-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Layout ── */
+    main { display: flex; height: calc(100vh - 61px); }
+
+    /* ── Sidebar ── */
+    aside {
+      width: 260px;
+      min-width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      padding: 14px 0 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 0 20px 8px;
+      display: block;
+    }
+
+    /* EP selector */
+    .ep-select-wrap { padding: 0 12px; position: relative; }
+    .ep-current-btn {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s;
+    }
+    .ep-current-btn:hover { border-color: var(--accent2); }
+    .ep-current-btn .ep-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ep-current-btn .ep-caret { color: var(--muted); flex-shrink: 0; }
+    .ep-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 12px;
+      right: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    .ep-dropdown-search {
+      width: 100%;
+      background: var(--surface);
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    .ep-dropdown-search::placeholder { color: var(--muted); }
+    .ep-option-list { max-height: 220px; overflow-y: auto; }
+    .ep-option {
+      padding: 9px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .ep-option:hover { background: var(--surface); color: var(--accent); }
+    .ep-option.selected { color: var(--accent); font-weight: 600; }
+    .ep-none { padding: 10px 14px; font-size: 12px; color: var(--muted); }
+    .ep-clear-row {
+      padding: 6px 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+    .ep-clear-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .ep-clear-btn:hover { color: var(--red); }
+
+    /* Time pills */
+    .time-pills-wrap { padding: 0 12px; display: flex; flex-wrap: wrap; gap: 5px; }
+    .time-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .time-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .time-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+    /* Metric nav buttons */
+    .sidebar-nav { flex: 1; padding: 8px 0; }
+    .metric-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 10px 20px;
+      color: var(--text);
+      font-size: 14px;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .metric-btn:hover { background: var(--surface2); }
+    .metric-btn.active {
+      background: var(--surface2);
+      border-left-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .metric-btn small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 12px;
+    }
+
+    /* ── Content ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Controls bar ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .controls h1 { font-size: 20px; font-weight: 700; flex: 1; min-width: 160px; }
+    .controls p { color: var(--muted); font-size: 13px; width: 100%; margin-top: -16px; }
+
+    select, button.refresh {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      font-family: inherit;
+    }
+    select:focus, button.refresh:hover { border-color: var(--accent); }
+    button.refresh {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    button.refresh:hover { background: var(--surface); }
+    button.refresh svg { transition: transform 0.4s; }
+    button.refresh.spinning svg { transform: rotate(360deg); }
+
+    /* ── Cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card.selected { border-color: var(--accent); background: var(--surface2); }
+    .card-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+    .card-unit { font-size: 13px; color: var(--muted); margin-left: 2px; }
+    .card-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--accent);
+      opacity: 0.6;
+      transition: width 0.6s ease;
+    }
+
+    /* ── Chart panel ── */
+    .chart-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .chart-panel h3 { font-size: 15px; margin-bottom: 4px; }
+    .chart-panel h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .chart-panel .chart-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .chart-wrap { position: relative; height: 280px; }
+    .chart-wrap-sm { position: relative; height: 200px; }
+
+    /* ── States ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      padding: 60px;
+      text-align: center;
+    }
+    .empty-state .icon { font-size: 48px; opacity: 0.4; }
+
+    .error-bar {
+      background: #3b1f1f;
+      border: 1px solid #7f3f3f;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--red);
+      font-size: 13px;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+    }
+    .summary-bar .summary-label { font-size: 13px; color: var(--muted); flex: 1; }
+    .summary-bar .summary-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .summary-bar .summary-unit { font-size: 13px; color: var(--muted); }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: var(--surface2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      vertical-align: middle;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+
+    /* ── Job tag ── */
+    .job-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ── Search input ── */
+    .search-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 14px 8px 34px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 220px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238892b0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 10px center;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    /* ── Overview ── */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .ov-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .ov-stat:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .ov-stat-name { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .ov-stat-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .ov-stat-unit { font-size: 12px; color: var(--muted); margin-left: 2px; }
+    .ov-charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1000px) { .ov-charts-grid { grid-template-columns: 1fr; } }
+
+    /* ── Combined bundle view ── */
+    .bundle-table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .bundle-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .bundle-table th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .bundle-table td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .bundle-table tr:last-child td { border-bottom: none; }
+    .bundle-table tr:hover td { background: var(--surface2); }
+    .bundle-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .bundle-charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1000px) { .bundle-charts-row { grid-template-columns: 1fr; } }
+
+    /* ── Isolation badge ── */
+    .isolation-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--accent2);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--accent2);
+    }
+    .isolation-bar strong { color: var(--text); }
+    .isolation-clear {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: auto;
+      padding: 0 4px;
+    }
+    .isolation-clear:hover { color: var(--red); }
+
+    /* ── Download Modal ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+    }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      min-width: 460px;
+      max-width: 600px;
+      max-height: 82vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 2px;
+    }
+    .modal-close:hover { color: var(--red); }
+    .modal-section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-toggle {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 5px;
+      padding: 2px 9px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .modal-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .modal-checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .modal-ep-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .modal-check-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 2px 0;
+    }
+    .modal-check-item input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Metrics<span>Dash</span></div>
+  <div class="header-user">
+    <a href="/admin" id="admin-link" style="display:none" class="header-btn">Admin Panel</a>
+    <span id="user-name" style="color:var(--muted);font-size:13px"></span>
+    <button class="header-btn" onclick="logout()">Log out</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <!-- EP Selector -->
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Endpoint</span>
+      <div class="ep-select-wrap" id="ep-select-wrap">
+        <button class="ep-current-btn" id="ep-current-btn" onclick="toggleEpDropdown(event)">
+          <span class="ep-label" id="ep-label-text">Select endpoint…</span>
+          <svg class="ep-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="ep-dropdown" id="ep-dropdown" style="display:none">
+          <input class="ep-dropdown-search" id="ep-dropdown-search" type="text"
+                 placeholder="Search endpoints…" oninput="filterEpOptions(this.value)" />
+          <div class="ep-option-list" id="ep-option-list"></div>
+          <div class="ep-clear-row">
+            <button class="ep-clear-btn" onclick="clearGlobalEP()">Clear selection</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Range -->
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Time Range</span>
+      <div class="time-pills-wrap" id="time-pills"></div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="sidebar-nav">
+      <span class="sidebar-section-title" style="padding-top:10px">Views</span>
+      <button class="metric-btn" data-id="_overview" onclick="selectView('_overview')">
+        Overview
+        <small>All metrics for selected EP</small>
+      </button>
+      <button class="metric-btn" data-id="_combined" onclick="selectView('_combined')">
+        Imps + Fill by Bundle
+        <small>Combined bundle view + download</small>
+      </button>
+      <div class="sidebar-divider"></div>
+      <span class="sidebar-section-title" style="padding-top:6px">Metrics</span>
+      <div id="sidebar-metrics"></div>
+    </div>
+  </aside>
+
+  <div class="content" id="content">
+    <div class="empty-state">
+      <div class="icon">📊</div>
+      <div style="font-size:16px;color:var(--text)">Select a view or metric from the left</div>
+      <div>Choose an endpoint first for EP-specific data</div>
+    </div>
+  </div>
+</main>
+
+<!-- Download Modal -->
+<div class="modal-backdrop" id="download-modal" style="display:none" onclick="if(event.target===this)closeDownloadModal()">
+  <div class="modal-box">
+    <div class="modal-title">
+      Download CSV
+      <button class="modal-close" onclick="closeDownloadModal()">✕</button>
+    </div>
+    <div>
+      <div class="modal-section-label">
+        Metrics
+        <button class="modal-toggle" onclick="modalToggleAll('modal-metric-cb', true)">All</button>
+        <button class="modal-toggle" onclick="modalToggleAll('modal-metric-cb', false)">None</button>
+      </div>
+      <div class="modal-checkbox-grid" id="modal-metrics-list"></div>
+    </div>
+    <div>
+      <div class="modal-section-label">
+        Endpoints
+        <button class="modal-toggle" onclick="modalToggleAll('modal-ep-cb', true)">All</button>
+        <button class="modal-toggle" onclick="modalToggleAll('modal-ep-cb', false)">None</button>
+      </div>
+      <div class="modal-ep-list" id="modal-ep-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="header-btn" onclick="closeDownloadModal()">Cancel</button>
+      <button class="btn-primary" id="modal-dl-btn" onclick="executeModalDownload()">Download CSV</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PALETTE = [
+  '#6c8eff','#a78bfa','#4ade80','#fb923c','#f472b6',
+  '#22d3ee','#facc15','#f87171','#34d399','#c084fc'
+];
+
+// ── Global State ─────────────────────────────────────────────────
+let globalEP = null;          // selected endpoint — persists across all views
+let globalHours = 24;         // time range — global for all charts
+let allJobs = [];             // loaded once from /api/jobs
+let allMetrics = [];          // loaded once from /api/metrics
+let activeView = null;        // current view id (metric id, '_overview', '_combined')
+let chartInstances = {};      // canvasId -> Chart instance
+
+// Per-metric view state
+let activeLabel = null;
+let activeLabelMap = null;
+let cachedCurrentData = null;
+let cachedRangeData = null;
+let cardData = [];
+let selectedCardIndices = new Set();
+
+// Combined / overview state
+let isolatedSeriesLabel = null;  // bundle isolation
+let combinedImpsRange = null;    // cached for redraw on isolation
+let combinedFillRange = null;
+
+// ── Multi-dim label helpers ──────────────────────────────────────
+function getFilterDim(metricConf) {
+  const d = metricConf?.labelDimension;
+  const arr = Array.isArray(d) ? d : (d ? [d] : []);
+  return arr.length > 1 ? arr[arr.length - 1] : null;
+}
+function getCardDims(metricConf) {
+  const d = metricConf?.labelDimension;
+  const arr = Array.isArray(d) ? d : (d ? [d] : []);
+  return arr.length > 1 ? arr.slice(0, -1) : arr;
+}
+
+// ── Fetch helpers ────────────────────────────────────────────────
+async function apiFetch(url) {
+  const r = await fetch(url);
+  if (r.status === 401) { window.location.href = '/login'; return null; }
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j.error || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function formatValue(v) {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '—';
+  if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(2) + 'B';
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+  if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(2) + 'K';
+  return v % 1 === 0 ? v.toString() : v.toFixed(2);
+}
+
+function lastValue(s) {
+  for (let i = s.points.length - 1; i >= 0; i--) {
+    if (s.points[i].value !== null && Number.isFinite(s.points[i].value)) return s.points[i].value;
+  }
+  return null;
+}
+
+function safeIdStr(id) {
+  return id.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function triggerCsvDownload(rows, baseName) {
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${baseName}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Chart management ─────────────────────────────────────────────
+function destroyAllCharts() {
+  Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch (_) {} });
+  chartInstances = {};
+}
+
+function destroyChart(canvasId) {
+  if (chartInstances[canvasId]) {
+    try { chartInstances[canvasId].destroy(); } catch (_) {}
+    delete chartInstances[canvasId];
+  }
+}
+
+function drawChartOnCanvas(canvasId, series, unit, stepMs, startMs, endMs, opts = {}) {
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !series.length) return null;
+
+  const datasets = series.map((s, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const dimmed = opts.isolatedLabel && opts.isolatedLabel !== s.label;
+    return {
+      label: s.label,
+      data: s.points.map(p => ({ x: p.ts, y: p.value })),
+      backgroundColor: dimmed ? color + '28' : color + 'cc',
+      borderColor: dimmed ? color + '40' : color,
+      borderWidth: 1,
+      borderRadius: 3,
+      borderSkipped: false,
+    };
+  });
+
+  const chart = new Chart(canvas, {
+    type: 'bar',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      onClick: opts.onBarClick ? (evt, elements) => {
+        if (!elements.length) return;
+        opts.onBarClick(datasets[elements[0].datasetIndex].label);
+      } : undefined,
+      plugins: {
+        legend: {
+          display: series.length > 1,
+          labels: { color: '#8892b0', font: { size: 11 } },
+        },
+        tooltip: {
+          backgroundColor: '#1a1d27',
+          borderColor: '#2e3350',
+          borderWidth: 1,
+          titleColor: '#e2e8f0',
+          bodyColor: '#8892b0',
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${formatValue(ctx.parsed.y)} ${unit}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          offset: true,
+          min: startMs,
+          max: endMs,
+          time: {
+            tooltipFormat: 'MMM d, HH:mm',
+            ...(stepMs ? { unit: stepMs >= 86400000 ? 'day' : stepMs >= 3600000 ? 'hour' : 'minute' } : {}),
+          },
+          ticks: { color: '#8892b0', maxTicksLimit: 10 },
+          grid: { color: '#2e3350' },
+        },
+        y: {
+          ticks: { color: '#8892b0', callback: v => `${formatValue(v)} ${unit}` },
+          grid: { color: '#2e3350' },
+        }
+      }
+    }
+  });
+
+  chartInstances[canvasId] = chart;
+  return chart;
+}
+
+// ── EP Selector ──────────────────────────────────────────────────
+async function initEPSelector() {
+  try {
+    const jobs = await apiFetch('/api/jobs');
+    if (!jobs) return;
+    allJobs = jobs;
+    renderEpOptions(jobs);
+
+    // Restore from localStorage
+    const saved = localStorage.getItem('globalEP');
+    if (saved && allJobs.includes(saved)) {
+      setGlobalEP(saved, false);
+    }
+  } catch (e) {
+    const wrap = document.getElementById('ep-select-wrap');
+    if (wrap) wrap.innerHTML = `<div style="padding:8px 4px;color:var(--red);font-size:12px">Failed to load endpoints</div>`;
+  }
+}
+
+function toggleEpDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('ep-dropdown');
+  const open = dd.style.display !== 'none';
+  dd.style.display = open ? 'none' : '';
+  if (!open) {
+    const input = document.getElementById('ep-dropdown-search');
+    if (input) { input.value = ''; input.focus(); renderEpOptions(allJobs); }
+  }
+}
+
+function filterEpOptions(q) {
+  const filtered = q ? allJobs.filter(j => j.toLowerCase().includes(q.toLowerCase())) : allJobs;
+  renderEpOptions(filtered);
+}
+
+function renderEpOptions(jobs) {
+  const list = document.getElementById('ep-option-list');
+  if (!list) return;
+  if (!jobs.length) {
+    list.innerHTML = `<div class="ep-none">No endpoints found</div>`;
+    return;
+  }
+  list.innerHTML = jobs.map(j =>
+    `<div class="ep-option ${j === globalEP ? 'selected' : ''}" onclick="setGlobalEP('${j.replace(/'/g, "\\'")}')">${j}</div>`
+  ).join('');
+}
+
+function setGlobalEP(ep, refresh = true) {
+  globalEP = ep;
+  localStorage.setItem('globalEP', ep);
+  document.getElementById('ep-label-text').textContent = ep;
+  document.getElementById('ep-label-text').style.color = '';
+  document.getElementById('ep-dropdown').style.display = 'none';
+  renderEpOptions(allJobs);
+  if (refresh && activeView) selectView(activeView);
+}
+
+function clearGlobalEP() {
+  globalEP = null;
+  localStorage.removeItem('globalEP');
+  document.getElementById('ep-label-text').textContent = 'Select endpoint…';
+  document.getElementById('ep-label-text').style.color = 'var(--muted)';
+  document.getElementById('ep-dropdown').style.display = 'none';
+  renderEpOptions(allJobs);
+  if (activeView) selectView(activeView);
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('ep-select-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const dd = document.getElementById('ep-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+// ── Time Pills ───────────────────────────────────────────────────
+function initTimePills() {
+  const ranges = [
+    { h: 1, label: '1h' }, { h: 6, label: '6h' }, { h: 12, label: '12h' },
+    { h: 24, label: '24h' }, { h: 48, label: '2d' }, { h: 168, label: '7d' }
+  ];
+  const container = document.getElementById('time-pills');
+  container.innerHTML = ranges.map(r =>
+    `<button class="time-pill ${r.h === globalHours ? 'active' : ''}" data-h="${r.h}" onclick="setGlobalHours(${r.h})">${r.label}</button>`
+  ).join('');
+}
+
+function setGlobalHours(h) {
+  globalHours = h;
+  document.querySelectorAll('.time-pill').forEach(p =>
+    p.classList.toggle('active', parseInt(p.dataset.h) === h));
+  // Refresh active view's charts
+  if (activeView === '_overview') renderOverview();
+  else if (activeView === '_combined') renderCombined();
+  else if (activeView && cachedRangeData) refreshMetricChart();
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────
+async function loadSidebar() {
+  const sidebar = document.getElementById('sidebar-metrics');
+  try {
+    const result = await apiFetch('/api/metrics');
+    if (!result) return;
+    allMetrics = result;
+    sidebar.innerHTML = allMetrics.map(m =>
+      `<button class="metric-btn" data-id="${m.id}" onclick="selectView('${m.id}')">
+        ${m.name}
+        <small>${m.description}</small>
+      </button>`
+    ).join('');
+  } catch (e) {
+    sidebar.innerHTML = `<div style="padding:16px;color:var(--red);font-size:13px">Could not load metrics: ${e.message}</div>`;
+  }
+}
+
+// ── View router ──────────────────────────────────────────────────
+function selectView(id) {
+  activeView = id;
+  isolatedSeriesLabel = null;
+  document.querySelectorAll('.metric-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  destroyAllCharts();
+
+  if (id === '_overview') { renderOverview(); return; }
+  if (id === '_combined') { renderCombined(); return; }
+  selectMetric(id);
+}
+
+function requireEP(message = 'Select an endpoint from the sidebar to view this data.') {
+  if (globalEP) return true;
+  document.getElementById('content').innerHTML = `
+    <div class="empty-state">
+      <div class="icon" style="font-size:40px">📡</div>
+      <div style="font-size:16px;color:var(--text)">No endpoint selected</div>
+      <div>${message}</div>
+    </div>`;
+  return false;
+}
+
+// ── Overview ─────────────────────────────────────────────────────
+async function renderOverview() {
+  if (!requireEP('Use the Endpoint selector in the sidebar to get started.')) return;
+
+  const el = document.getElementById('content');
+  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+
+  el.innerHTML = `
+    <div class="controls">
+      <h1>Overview <span class="badge">${globalEP}</span></h1>
+      <p>All metrics for endpoint · Last ${periodLabel}</p>
+      <button class="refresh" onclick="renderOverview()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Refresh
+      </button>
+      <button class="refresh" onclick="openDownloadModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download
+      </button>
+    </div>
+
+    <div class="overview-grid" id="ov-stats">
+      ${allMetrics.map(m => `
+        <div class="ov-stat skeleton" id="ov-stat-${safeIdStr(m.id)}" style="height:88px"></div>
+      `).join('')}
+    </div>
+
+    <div class="ov-charts-grid" id="ov-charts">
+      ${allMetrics.map(m => `
+        <div class="chart-panel">
+          <h4>${m.name}</h4>
+          <div class="chart-sub">${m.description}</div>
+          <div class="chart-wrap-sm"><canvas id="ov-chart-${safeIdStr(m.id)}"></canvas></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Fetch all metrics in parallel
+  const fetches = allMetrics.map(m =>
+    apiFetch(`/api/metrics/${m.id}/current`).catch(() => null)
+  );
+  const results = await Promise.all(fetches);
+
+  results.forEach((data, i) => {
+    const m = allMetrics[i];
+    const statEl = document.getElementById(`ov-stat-${safeIdStr(m.id)}`);
+    if (!statEl) return;
+    statEl.className = 'ov-stat';
+    statEl.style = '';
+    statEl.onclick = () => selectView(m.id);
+
+    if (!data) {
+      statEl.innerHTML = `<div class="ov-stat-name">${m.name}</div><div class="ov-stat-value">—</div>`;
+      return;
+    }
+
+    const filterDim = getFilterDim(m);
+    let filtered = data.results;
+    if (filterDim && globalEP) {
+      filtered = filtered.filter(r => r.labelMap[filterDim] === globalEP);
+    } else if (!filterDim && globalEP) {
+      filtered = filtered.filter(r => r.labelMap?.job === globalEP);
+    }
+
+    const nums = filtered.map(r => r.value).filter(v => v !== null && Number.isFinite(v));
+    const isPercent = m.unit === '%';
+    const agg = nums.length
+      ? (isPercent ? nums.reduce((a,b)=>a+b,0)/nums.length : nums.reduce((a,b)=>a+b,0))
+      : null;
+
+    statEl.innerHTML = `
+      <div class="ov-stat-name">${m.name}</div>
+      <div class="ov-stat-value">${agg !== null ? formatValue(agg) : '—'}<span class="ov-stat-unit">${m.unit}</span></div>
+    `;
+  });
+
+  // Load charts
+  for (const m of allMetrics) {
+    loadOverviewChart(m);
+  }
+}
+
+async function loadOverviewChart(m) {
+  const canvasId = `ov-chart-${safeIdStr(m.id)}`;
+  const filterDim = getFilterDim(m);
+  const labelFilter = filterDim
+    ? { [filterDim]: globalEP }
+    : { job: globalEP };
+  const labelsParam = encodeURIComponent(JSON.stringify(labelFilter));
+  try {
+    const data = await apiFetch(`/api/metrics/${m.id}/range?labels=${labelsParam}&hours=${globalHours}`);
+    if (!data?.series?.length) return;
+    const sorted = data.series.slice().sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
+    drawChartOnCanvas(canvasId, sorted, m.unit, data.stepMs, data.startMs, data.endMs);
+  } catch (_) {}
+}
+
+// ── Combined Imps + Fill by Bundle ───────────────────────────────
+async function renderCombined() {
+  if (!requireEP('Select an endpoint to view the bundle breakdown.')) return;
+
+  const impsMetric = allMetrics.find(m => m.id === 'impsByBundle:1h');
+  const fillMetric = allMetrics.find(m => m.id === 'fillRateByBundle:30m');
+  const periodLabel = globalHours < 24 ? `${globalHours}h` : `${globalHours / 24}d`;
+
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div class="controls">
+      <h1>Imps + Fill by Bundle <span class="badge">${globalEP}</span></h1>
+      <p>Bundle breakdown for endpoint · Last ${periodLabel}</p>
+      <button class="refresh" onclick="renderCombined()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Refresh
+      </button>
+      <button class="refresh" onclick="downloadCombinedCsv()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download Table
+      </button>
+    </div>
+    <div id="combined-body"><div class="skeleton" style="height:280px;border-radius:12px"></div></div>
+  `;
+
+  if (!impsMetric || !fillMetric) {
+    document.getElementById('combined-body').innerHTML =
+      `<div class="error-bar">⚠️ Could not find impsByBundle:1h or fillRateByBundle:30m in metrics config</div>`;
+    return;
+  }
+
+  const labelsParam = encodeURIComponent(JSON.stringify({ job: globalEP }));
+  try {
+    const [impsRange, fillRange] = await Promise.all([
+      apiFetch(`/api/metrics/${impsMetric.id}/range?labels=${labelsParam}&hours=${globalHours}`),
+      apiFetch(`/api/metrics/${fillMetric.id}/range?labels=${labelsParam}&hours=${globalHours}`),
+    ]);
+
+    combinedImpsRange = impsRange;
+    combinedFillRange = fillRange;
+
+    // Build table from last-point values, joined on bundle
+    const bundleMap = {};
+    const bundleOrder = [];
+
+    (impsRange?.series ?? []).forEach((s, i) => {
+      const bundle = s.label.split(' / ')[0];
+      if (!bundleMap[bundle]) { bundleMap[bundle] = { color: PALETTE[i % PALETTE.length] }; bundleOrder.push(bundle); }
+      bundleMap[bundle].imps = lastValue(s);
+    });
+    (fillRange?.series ?? []).forEach((s, i) => {
+      const bundle = s.label.split(' / ')[0];
+      if (!bundleMap[bundle]) { bundleMap[bundle] = { color: PALETTE[i % PALETTE.length] }; bundleOrder.push(bundle); }
+      bundleMap[bundle].fill = lastValue(s);
+    });
+
+    const bundles = bundleOrder.sort((a, b) => (bundleMap[b].imps ?? 0) - (bundleMap[a].imps ?? 0));
+    window._combinedBundleData = { bundleMap, bundles };
+
+    const tableRows = bundles.map(b => {
+      const v = bundleMap[b];
+      return `<tr>
+        <td><span class="bundle-dot" style="background:${v.color}"></span>${b}</td>
+        <td>${v.imps !== null && v.imps !== undefined ? formatValue(v.imps) : '—'}</td>
+        <td>${v.fill !== null && v.fill !== undefined ? formatValue(v.fill) + '%' : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('combined-body').innerHTML = `
+      <div class="bundle-table-wrap">
+        <table class="bundle-table">
+          <thead><tr><th>Bundle</th><th>Impressions (1h window)</th><th>Fill Rate (30m window)</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      <div id="isolation-bar-slot"></div>
+      <div class="bundle-charts-row">
+        <div class="chart-panel">
+          <h4>Impressions by Bundle (1h)</h4>
+          <div class="chart-sub">Click a bar to isolate that bundle</div>
+          <div class="chart-wrap"><canvas id="chart-imps-bundle"></canvas></div>
+        </div>
+        <div class="chart-panel">
+          <h4>Fill Rate by Bundle (30m)</h4>
+          <div class="chart-sub">Click a bar to isolate that bundle</div>
+          <div class="chart-wrap"><canvas id="chart-fill-bundle"></canvas></div>
+        </div>
+      </div>
+    `;
+
+    drawCombinedCharts();
+  } catch (e) {
+    document.getElementById('combined-body').innerHTML = `<div class="error-bar">⚠️ ${e.message}</div>`;
+  }
+}
+
+function drawCombinedCharts() {
+  const impsSorted = (combinedImpsRange?.series ?? []).slice()
+    .sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
+  const fillSorted = (combinedFillRange?.series ?? []).slice()
+    .sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
+
+  const makeClickHandler = (otherCanvasId, otherSeries, otherUnit, otherRange) => (clickedLabel) => {
+    const bundle = clickedLabel.split(' / ')[0];
+    const fullLabel = clickedLabel;
+    if (isolatedSeriesLabel === fullLabel) {
+      isolatedSeriesLabel = null;
+      document.getElementById('isolation-bar-slot').innerHTML = '';
+    } else {
+      isolatedSeriesLabel = fullLabel;
+      document.getElementById('isolation-bar-slot').innerHTML = `
+        <div class="isolation-bar">
+          Showing: <strong>${bundle}</strong>
+          <button class="isolation-clear" onclick="clearBundleIsolation()">✕ Show all</button>
+        </div>`;
+    }
+    drawCombinedCharts();
+  };
+
+  const impsOpts = {
+    isolatedLabel: isolatedSeriesLabel,
+    onBarClick: makeClickHandler('chart-fill-bundle', fillSorted, '%', combinedFillRange),
+  };
+  const fillOpts = {
+    isolatedLabel: isolatedSeriesLabel,
+    onBarClick: makeClickHandler('chart-imps-bundle', impsSorted, 'imps', combinedImpsRange),
+  };
+
+  if (impsSorted.length && combinedImpsRange) {
+    drawChartOnCanvas('chart-imps-bundle', impsSorted, 'imps',
+      combinedImpsRange.stepMs, combinedImpsRange.startMs, combinedImpsRange.endMs, impsOpts);
+  }
+  if (fillSorted.length && combinedFillRange) {
+    drawChartOnCanvas('chart-fill-bundle', fillSorted, '%',
+      combinedFillRange.stepMs, combinedFillRange.startMs, combinedFillRange.endMs, fillOpts);
+  }
+}
+
+function clearBundleIsolation() {
+  isolatedSeriesLabel = null;
+  document.getElementById('isolation-bar-slot').innerHTML = '';
+  drawCombinedCharts();
+}
+
+function downloadCombinedCsv() {
+  const data = window._combinedBundleData;
+  if (!data) return;
+  const rows = [['Endpoint', 'Bundle', 'Impressions (1h)', 'Fill Rate % (30m)']];
+  data.bundles.forEach(b => {
+    const v = data.bundleMap[b];
+    rows.push([`"${globalEP}"`, `"${b}"`, v.imps ?? '', v.fill ?? '']);
+  });
+  triggerCsvDownload(rows, `imps_fill_bundle_${globalEP}`);
+}
+
+// ── Individual Metric View ───────────────────────────────────────
+async function selectMetric(id) {
+  activeLabel = null;
+  activeLabelMap = null;
+  cachedCurrentData = null;
+  cachedRangeData = null;
+  selectedCardIndices = new Set();
+  cardData = [];
+
+  renderContent('loading');
+  try {
+    const data = await apiFetch(`/api/metrics/${id}/current`);
+    if (!data) return;
+    cachedCurrentData = data;
+    const metricConf = allMetrics.find(m => m.id === id);
+    const filterDim = getFilterDim(metricConf);
+
+    if (filterDim && !globalEP) {
+      renderContent('no-ep');
+      return;
+    }
+
+    renderContent('current', data);
+
+    if (filterDim && globalEP) {
+      await autoLoadAllSeriesChart();
+    }
+  } catch (e) {
+    renderContent('error', e.message);
+  }
+}
+
+async function autoLoadAllSeriesChart() {
+  const metricConf = allMetrics.find(m => m.id === activeView);
+  const filterDim = getFilterDim(metricConf);
+  if (!filterDim || !globalEP) return;
+  const panel = document.getElementById('chart-panel');
+  if (!panel) return;
+  try {
+    const labelsParam = encodeURIComponent(JSON.stringify({ [filterDim]: globalEP }));
+    const data = await apiFetch(`/api/metrics/${activeView}/range?labels=${labelsParam}&hours=${globalHours}`);
+    if (!data) return;
+    const sorted = data.series.slice().sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
+    cachedRangeData = { ...data, series: sorted };
+    renderRangePanel(`All ${getCardDims(metricConf).join('/')}s`, cachedRangeData);
+  } catch (e) {
+    if (panel) panel.innerHTML = `<div class="error-bar">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function refreshMetricChart() {
+  const metricConf = allMetrics.find(m => m.id === activeView);
+  const filterDim = getFilterDim(metricConf);
+  if (filterDim && globalEP) {
+    await autoLoadAllSeriesChart();
+    if (selectedCardIndices.size > 0) redrawChart();
+    return;
+  }
+  if (activeLabelMap && activeView) {
+    const labelsParam = encodeURIComponent(JSON.stringify(activeLabelMap));
+    try {
+      const panel = document.getElementById('chart-panel');
+      if (panel) panel.innerHTML = `<div class="skeleton" style="height:300px;"></div>`;
+      const data = await apiFetch(`/api/metrics/${activeView}/range?labels=${labelsParam}&hours=${globalHours}`);
+      if (!data) return;
+      cachedRangeData = data;
+      renderRangePanel(activeLabel, data);
+    } catch (e) {
+      const panel = document.getElementById('chart-panel');
+      if (panel) panel.innerHTML = `<div class="error-bar">⚠️ ${e.message}</div>`;
+    }
+  }
+}
+
+// ── Main content renderer ────────────────────────────────────────
+function renderContent(state, data) {
+  const el = document.getElementById('content');
+
+  if (state === 'loading') {
+    el.innerHTML = `
+      <div class="controls">
+        <h1 class="skeleton" style="height:24px;width:200px;">&nbsp;</h1>
+      </div>
+      <div class="cards">${Array(6).fill('<div class="card skeleton" style="height:90px;"></div>').join('')}</div>
+    `;
+    return;
+  }
+
+  if (state === 'error') {
+    el.innerHTML = `<div class="error-bar">⚠️ ${data}</div>`;
+    return;
+  }
+
+  if (state === 'no-ep') {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="icon" style="font-size:40px">📡</div>
+        <div style="font-size:16px;color:var(--text)">No endpoint selected</div>
+        <div>Use the Endpoint selector in the sidebar to filter data</div>
+      </div>`;
+    return;
+  }
+
+  if (state === 'current') {
+    const { metric, results } = data;
+    const metricConf = allMetrics.find(m => m.id === metric.id);
+    const filterDim = getFilterDim(metricConf);
+    const cardDims = getCardDims(metricConf);
+
+    const visibleResults = (filterDim && globalEP
+      ? results.filter(r => r.labelMap[filterDim] === globalEP)
+      : (globalEP ? results.filter(r => r.labelMap?.job === globalEP) : results)
+    ).slice().sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity));
+
+    const cardLabel = r => cardDims.map(d => r.labelMap?.[d] ?? '?').join(' / ');
+    const numericValues = visibleResults.map(r => r.value).filter(v => v !== null && Number.isFinite(v));
+    const isPercent = metric.unit === '%';
+    const summaryValue = isPercent
+      ? (numericValues.length ? numericValues.reduce((a, b) => a + b, 0) / numericValues.length : null)
+      : (numericValues.length ? numericValues.reduce((a, b) => a + b, 0) : null);
+    const summaryLabel = isPercent ? 'Average across all shown' : 'Total across all shown';
+    const max = Math.max(...visibleResults.map(r => r.value ?? 0), 1);
+
+    cardData = visibleResults.map(r => ({ label: cardLabel(r), labelMap: r.labelMap, metricId: metric.id, value: r.value, unit: r.unit }));
+
+    el.innerHTML = `
+      <div class="controls">
+        <h1>${metric.name}${globalEP ? `<span class="badge">${globalEP}</span>` : ''}</h1>
+        <button class="refresh" onclick="selectView('${metric.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Refresh
+        </button>
+        <button class="refresh" onclick="openDownloadModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download
+        </button>
+        <input class="search-input" type="text" placeholder="Search…" oninput="filterCards(this.value)" />
+        <p>${metric.description}</p>
+      </div>
+
+      ${visibleResults.length === 0 ? `
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <div>No data returned from Prometheus</div>
+          <div>Check that the recording rule <strong>${metric.rule}</strong> exists${globalEP ? ` and endpoint <strong>${globalEP}</strong> has data` : ''}</div>
+        </div>
+      ` : `
+        ${summaryValue !== null ? `
+          <div class="summary-bar">
+            <span class="summary-label" id="summary-label">${summaryLabel}</span>
+            <span class="summary-value" id="summary-value">${formatValue(summaryValue)}</span>
+            <span class="summary-unit" id="summary-unit">${metric.unit}</span>
+          </div>
+        ` : ''}
+        <div class="cards">
+          ${visibleResults.map((r, i) => `
+            <div class="card ${selectedCardIndices.has(i) ? 'selected' : ''}"
+                 data-label="${cardLabel(r).toLowerCase()}"
+                 onclick="selectLabel(${i})">
+              <div class="card-label" title="${cardLabel(r)}">${cardLabel(r)}</div>
+              <div class="card-value">${formatValue(r.value)}<span class="card-unit">${r.unit}</span></div>
+              <div class="card-bar" style="width:${Math.round(((r.value ?? 0) / max) * 100)}%;background:${PALETTE[i % PALETTE.length]}"></div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="chart-panel" id="chart-panel">
+          ${filterDim && globalEP
+            ? `<div class="skeleton" style="height:300px;"></div>`
+            : `<div class="empty-state" style="padding:40px">
+                <div class="icon" style="font-size:32px">👆</div>
+                <div>Click a card above to see its trend over time</div>
+               </div>`
+          }
+        </div>
+      `}
+    `;
+    return;
+  }
+}
+
+function renderRangePanel(label, data) {
+  const panel = document.getElementById('chart-panel');
+  if (!panel) return;
+  cachedRangeData = data;
+  const { metric, series } = data;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+      <h3>${label}</h3>
+      <span style="font-size:12px;color:var(--muted);margin-left:auto">Click a bar to isolate</span>
+    </div>
+    <div class="chart-sub">Trend — ${metric.name}</div>
+    <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+  `;
+
+  const visible = getVisibleSeries();
+  drawChartOnCanvas('trend-chart', visible, metric.unit, data.stepMs, data.startMs, data.endMs, {
+    onBarClick: (clickedLabel) => {
+      const metricConf = allMetrics.find(m => m.id === activeView);
+      const filterDim = getFilterDim(metricConf);
+      if (!filterDim) return; // single-dim: no isolation needed
+      // Toggle isolation
+      const newIso = isolatedSeriesLabel === clickedLabel ? null : clickedLabel;
+      isolatedSeriesLabel = newIso;
+      // Map from series label back to card index
+      const nCardDims = getCardDims(metricConf).length;
+      if (newIso) {
+        const bundle = newIso.split(' / ').slice(0, nCardDims).join(' / ');
+        selectedCardIndices = new Set(
+          cardData.map((cd, i) => cd.label === bundle ? i : -1).filter(i => i >= 0)
+        );
+      } else {
+        selectedCardIndices = new Set();
+      }
+      document.querySelectorAll('.card').forEach((c, i) =>
+        c.classList.toggle('selected', selectedCardIndices.has(i)));
+      redrawChart();
+    }
+  });
+  updateSummaryFromRange(series, metric);
+}
+
+// ── Series visibility (multi-dim) ────────────────────────────────
+function getVisibleSeries() {
+  if (!cachedRangeData) return [];
+  const { series } = cachedRangeData;
+  if (selectedCardIndices.size === 0) return series;
+
+  const metricConf = allMetrics.find(m => m.id === activeView);
+  const nCardDims = getCardDims(metricConf).length;
+  const selectedLabels = new Set([...selectedCardIndices].map(i => cardData[i]?.label).filter(Boolean));
+
+  return series.filter(s => {
+    const cardPart = s.label.split(' / ').slice(0, nCardDims).join(' / ');
+    return selectedLabels.has(cardPart);
+  });
+}
+
+function redrawChart() {
+  if (!cachedRangeData) return;
+  const { metric, stepMs, startMs, endMs } = cachedRangeData;
+  const visible = getVisibleSeries().slice().sort((a, b) => (lastValue(b) ?? 0) - (lastValue(a) ?? 0));
+  destroyChart('trend-chart');
+  drawChartOnCanvas('trend-chart', visible, metric.unit, stepMs, startMs, endMs, {
+    isolatedLabel: isolatedSeriesLabel,
+    onBarClick: (clickedLabel) => {
+      isolatedSeriesLabel = isolatedSeriesLabel === clickedLabel ? null : clickedLabel;
+      redrawChart();
+    }
+  });
+  updateSummaryFromRange(visible, metric);
+}
+
+// ── Select a label card ──────────────────────────────────────────
+async function selectLabel(cardIdx) {
+  const card = cardData[cardIdx];
+  if (!card) return;
+
+  const metricConf = allMetrics.find(m => m.id === activeView);
+  const filterDim = getFilterDim(metricConf);
+
+  // Multi-dim mode with cached range: toggle isolation
+  if (filterDim && globalEP && cachedRangeData) {
+    if (selectedCardIndices.has(cardIdx)) {
+      selectedCardIndices.delete(cardIdx);
+    } else {
+      selectedCardIndices.add(cardIdx);
+    }
+    document.querySelectorAll('.card').forEach((c, i) =>
+      c.classList.toggle('selected', selectedCardIndices.has(i)));
+    isolatedSeriesLabel = null;
+    redrawChart();
+    return;
+  }
+
+  // Single-dim: fetch range for this specific card
+  activeLabel = card.label;
+  activeLabelMap = card.labelMap;
+  selectedCardIndices = new Set([cardIdx]);
+  isolatedSeriesLabel = null;
+  document.querySelectorAll('.card').forEach((c, i) => c.classList.toggle('selected', i === cardIdx));
+
+  const labelEl = document.getElementById('summary-label');
+  const valueEl = document.getElementById('summary-value');
+  if (labelEl && valueEl) {
+    labelEl.textContent = card.label;
+    valueEl.textContent = formatValue(card.value);
+  }
+
+  const panel = document.getElementById('chart-panel');
+  if (!panel) return;
+  panel.innerHTML = `<div class="skeleton" style="height:300px;"></div>`;
+
+  try {
+    const labelsParam = encodeURIComponent(JSON.stringify(activeLabelMap));
+    const data = await apiFetch(`/api/metrics/${card.metricId}/range?labels=${labelsParam}&hours=${globalHours}`);
+    if (!data) return;
+    cachedRangeData = data;
+    renderRangePanel(activeLabel, data);
+  } catch (e) {
+    panel.innerHTML = `<div class="error-bar">⚠️ ${e.message}</div>`;
+  }
+}
+
+// ── Summary bar ──────────────────────────────────────────────────
+// Uses the LAST point per series (matches instant query card values)
+function updateSummaryFromRange(series, metric) {
+  const labelEl = document.getElementById('summary-label');
+  const valueEl = document.getElementById('summary-value');
+  if (!labelEl || !valueEl) return;
+
+  const lastValues = series.map(s => lastValue(s)).filter(v => v !== null && Number.isFinite(v));
+  if (!lastValues.length) return;
+
+  const isPercent = metric.unit === '%';
+  const aggValue = isPercent
+    ? lastValues.reduce((a, b) => a + b, 0) / lastValues.length
+    : lastValues.reduce((a, b) => a + b, 0);
+
+  labelEl.textContent = isPercent ? 'Average (current window)' : 'Total (current window)';
+  valueEl.textContent = formatValue(aggValue);
+}
+
+// ── Cards search ─────────────────────────────────────────────────
+function filterCards(query) {
+  const q = query.toLowerCase().trim();
+  const visibleValues = [];
+
+  document.querySelectorAll('.cards .card').forEach((card, i) => {
+    const label = card.dataset.label || '';
+    const match = !q || label.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match && cardData[i]) visibleValues.push(cardData[i].value);
+  });
+
+  const labelEl = document.getElementById('summary-label');
+  const valueEl = document.getElementById('summary-value');
+  if (!labelEl || !valueEl) return;
+
+  const metric = cachedCurrentData?.metric;
+  if (!metric) return;
+  const isPercent = metric.unit === '%';
+  const nums = visibleValues.filter(v => v !== null && Number.isFinite(v));
+  if (!nums.length) { valueEl.textContent = '—'; return; }
+  const agg = isPercent
+    ? nums.reduce((a, b) => a + b, 0) / nums.length
+    : nums.reduce((a, b) => a + b, 0);
+  labelEl.textContent = isPercent ? 'Average across shown' : 'Total across shown';
+  valueEl.textContent = formatValue(agg);
+}
+
+// ── Download Modal ───────────────────────────────────────────────
+function openDownloadModal() {
+  const metricsList = document.getElementById('modal-metrics-list');
+  metricsList.innerHTML = allMetrics.map(m => `
+    <label class="modal-check-item">
+      <input type="checkbox" class="modal-metric-cb" value="${m.id}" checked />
+      ${m.name}
+    </label>
+  `).join('');
+
+  const epList = document.getElementById('modal-ep-list');
+  epList.innerHTML = allJobs.map(j => `
+    <label class="modal-check-item">
+      <input type="checkbox" class="modal-ep-cb" value="${j}" ${j === globalEP ? 'checked' : ''} />
+      ${j}
+    </label>
+  `).join('');
+
+  document.getElementById('download-modal').style.display = 'flex';
+}
+
+function closeDownloadModal() {
+  document.getElementById('download-modal').style.display = 'none';
+}
+
+function modalToggleAll(cls, checked) {
+  document.querySelectorAll(`.${cls}`).forEach(cb => cb.checked = checked);
+}
+
+async function executeModalDownload() {
+  const selectedMetricIds = [...document.querySelectorAll('.modal-metric-cb:checked')].map(cb => cb.value);
+  const selectedEPs = [...document.querySelectorAll('.modal-ep-cb:checked')].map(cb => cb.value);
+
+  if (!selectedMetricIds.length || !selectedEPs.length) {
+    alert('Select at least one metric and one endpoint.');
+    return;
+  }
+
+  const btn = document.getElementById('modal-dl-btn');
+  btn.textContent = 'Fetching…';
+  btn.disabled = true;
+
+  try {
+    const rows = [['Endpoint', 'Metric', 'Label', 'Value', 'Unit']];
+
+    for (const metricId of selectedMetricIds) {
+      const metricConf = allMetrics.find(m => m.id === metricId);
+      const filterDim = getFilterDim(metricConf);
+      const cardDims = getCardDims(metricConf);
+      try {
+        const data = await apiFetch(`/api/metrics/${metricId}/current`);
+        if (!data) continue;
+        const { metric, results } = data;
+        for (const ep of selectedEPs) {
+          const epResults = filterDim
+            ? results.filter(r => r.labelMap[filterDim] === ep)
+            : results.filter(r => r.labelMap?.job === ep);
+          for (const r of epResults) {
+            const label = cardDims.map(d => r.labelMap?.[d] ?? '?').join(' / ');
+            rows.push([`"${ep}"`, `"${metric.name}"`, `"${label}"`, r.value ?? '', `"${metric.unit}"`]);
+          }
+        }
+      } catch (_) {}
+    }
+
+    triggerCsvDownload(rows, `metrics_export`);
+    closeDownloadModal();
+  } finally {
+    btn.textContent = 'Download CSV';
+    btn.disabled = false;
+  }
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+async function initUser() {
+  const me = await apiFetch('/auth/me');
+  if (!me) return;
+  document.getElementById('user-name').textContent = me.name || me.email;
+  if (me.role === 'admin') document.getElementById('admin-link').style.display = '';
+}
+
+function logout() {
+  fetch('/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login'; });
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+async function init() {
+  initTimePills();
+  await Promise.all([loadSidebar(), initUser()]);
+  await initEPSelector();
+}
+init();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</body>
+</html>

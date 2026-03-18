@@ -1,0 +1,56 @@
+[
+  {
+    "id": "admin",
+    "email": "admin",
+    "name": "Admin",
+    "role": "admin",
+    "jobFilter": {
+      "type": "all"
+    },
+    "passwordHash": "94ddd4ea7385c94407f94f99539d0241:43d9d53dc103eec8b6f29ca7d90dc40e245db6a261079ac29bd68d5589f3096eeffb9c68ae1156507854c1f5f766138ca397646171396e6c5879bee6b6dfe756"
+  },
+  {
+    "id": "lenny",
+    "email": "lenny@markito.tv",
+    "name": "Lenny",
+    "role": "user",
+    "jobFilter": {
+      "type": "all"
+    },
+    "passwordHash": "33d0eab7c07f4265a2eb4d9b4d27ae75:d582aa10f9efd002ae8f5c06b50f283f149f819bf3f003c36657809a03744270ea8674ae1339e1c981b25605d3d43b07625caf98f9f3db97071e8d026f380c7c",
+    "disabled": false
+  },
+  {
+    "id": "ido",
+    "email": "ido@markito.tv",
+    "name": "Ido",
+    "role": "user",
+    "jobFilter": {
+      "type": "exclude",
+      "pattern": "shtz"
+    },
+    "passwordHash": "3b8d7782da3c18344334c944f515562c:3536e63b759050c0d36927d229630f0289978d5aedf0d37477fd109f3670805c701e49229034c542eb0ddda04c8d19d33fe724d0f625dc962b7b30b353d18554"
+  },
+  {
+    "id": "maya",
+    "email": "maya@markito.tv",
+    "name": "Maya",
+    "role": "user",
+    "jobFilter": {
+      "type": "exclude",
+      "pattern": "shtz"
+    },
+    "passwordHash": "aa04b759230fa8e08f2f0c3ec8710f8c:32d6ccef5e7f2ecab38b6dc6cfdb128d3b71512b1a577dfe8d96138755e33178e0e1d1dd64bf931795e0ac0116394990d87e6fd24caa145c36daca457555fbab"
+  },
+  {
+    "id": "elad",
+    "email": "elad@shortiz.tv",
+    "name": "Elad",
+    "role": "user",
+    "jobFilter": {
+      "type": "only",
+      "pattern": "shtz"
+    },
+    "passwordHash": "6d6fd3380a8659e42e26034dd137d6ce:6a0fb731450ae876964359b49558e29e0584526f30520de04ee419c09cfd07732ee499770982a66cab309d698b7369edbf6ad0fc1025b9dfbadaf5689c3c0da4"
+  }
+]
