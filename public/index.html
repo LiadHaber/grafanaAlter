@@ -1386,7 +1386,8 @@ document.addEventListener('click', e => {
   if (!drp.open) return;
   const popup = document.getElementById('drp-popup');
   const btn = document.getElementById('drp-toggle');
-  if (popup && !popup.contains(e.target) && btn && !btn.contains(e.target)) closeDrp();
+  const path = e.composedPath();
+  if (popup && !path.includes(popup) && btn && !path.includes(btn)) closeDrp();
 });
 
 function rangeQueryParams() {
