@@ -21,11 +21,11 @@
     },
     {
       "id": "increase30mByEP:reqs",
-      "name": "Requests (30m)",
-      "rule": "increase30mByEP:reqs",
+      "name": "QPS",
+      "rule": "increase30mByEP:reqs / 1800",
       "window": "30m",
-      "unit": "reqs",
-      "description": "Total requests per endpoint over the last 30 minutes",
+      "unit": "req/s",
+      "description": "Requests per second per endpoint (30-minute window)",
       "labelDimension": "job"
     },
     {
